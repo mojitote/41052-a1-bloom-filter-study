@@ -1,0 +1,16 @@
+{
+  "reference_sha256": "af29c15a696182e69cce2ba139b05aa25b3a730f67f8e711f3adece96671a7c9",
+  "modified_parts": [
+    "word/document.xml",
+    "word/_rels/document.xml.rels",
+    "word/settings.xml"
+  ],
+  "added_figures": [
+    "word/media/study1.png",
+    "word/media/study2.png",
+    "word/media/study3.png"
+  ],
+  "preserved_original_parts": 18,
+  "sections": 2,
+  "planned_pages": 15
+}

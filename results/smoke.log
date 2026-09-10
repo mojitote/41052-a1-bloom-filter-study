@@ -1,0 +1,7 @@
+accuracy seed 1/2 complete
+accuracy seed 2/2 complete
+timing seed=1 n=2000 complete
+timing seed=1 n=20000 complete
+timing seed=2 n=2000 complete
+timing seed=2 n=20000 complete
+Study complete; observable checksum=6243960

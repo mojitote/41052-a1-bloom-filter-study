@@ -22,6 +22,16 @@ int main() {
         rejects([] { bloom::BloomFilter f(0, 1); });
         rejects([] { bloom::BloomFilter f(10, 0); });
         rejects([] { bloom::BloomFilter f(10, 65); });
+        // Fixed known-answer vectors do not call the implementation to compute expected positions.
+        require(bloom::mix64(0) == 0, "mixer zero vector");
+        require(bloom::mix64(1) == UINT64_C(0x5692161d100b05e5), "mixer known-answer vector");
+        bloom::BloomFilter trace(64, 3, 7);
+        const std::size_t expected10[] = {30, 14, 16};
+        const std::size_t expected20[] = {11, 31, 46};
+        for (std::size_t i = 0; i < 3; ++i) {
+            require(trace.position(10, i) == expected10[i], "known index for 10");
+            require(trace.position(20, i) == expected20[i], "known index for 20");
+        }
         for (std::size_t m : {1u, 7u, 63u, 64u, 65u, 127u, 1024u}) {
             for (std::size_t k : {1u, 3u, 64u}) {
                 bloom::BloomFilter f(m, k, 42);
@@ -62,6 +72,8 @@ int main() {
             require(a.contains(x) == b.contains(x), "seed reproducibility");
             if (exact.count(x)) require(a.contains(x), "large-set false negative");
             else fp += a.contains(x);
+            require((a.contains(x) && exact.count(x) != 0) == (exact.count(x) != 0),
+                    "filtered exact lookup must match oracle on each key, not only total count");
         }
         require(fp > 100 && fp < 3000, "gross statistical/hash failure (broad smoke bounds)");
         require(bloom::predicted_fpr(1000, 7, 0) == 0, "empty theoretical FPR");

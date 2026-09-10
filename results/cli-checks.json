@@ -1,0 +1,64 @@
+[
+  {
+    "command": [
+      "./build/study",
+      "--help"
+    ],
+    "exit": 0,
+    "passed": true,
+    "output": "Usage: study --out NEW_DIRECTORY [--quick]\nDefault: full study. Existing results are never overwritten."
+  },
+  {
+    "command": [
+      "./build/study"
+    ],
+    "exit": 1,
+    "passed": true,
+    "output": "Error: --out NEW_DIRECTORY is required"
+  },
+  {
+    "command": [
+      "./build/study",
+      "--out",
+      "results/full-20260910"
+    ],
+    "exit": 1,
+    "passed": true,
+    "output": "Error: output path already exists; choose a new run directory"
+  },
+  {
+    "command": [
+      "./build/study",
+      "--bad"
+    ],
+    "exit": 1,
+    "passed": true,
+    "output": "Error: unknown or incomplete option: --bad"
+  },
+  {
+    "command": [
+      "./build/bloom_demo",
+      "--bad"
+    ],
+    "exit": 2,
+    "passed": true,
+    "output": "Unknown option; use --help"
+  },
+  {
+    "command": [
+      "./build/early_exit"
+    ],
+    "exit": 2,
+    "passed": true,
+    "output": "Usage: early_exit NEW_OUTPUT.csv"
+  },
+  {
+    "command": [
+      "./build/early_exit",
+      "results/early-exit-20260910.csv"
+    ],
+    "exit": 2,
+    "passed": true,
+    "output": "Refusing to overwrite existing result"
+  }
+]

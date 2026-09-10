@@ -3,7 +3,7 @@ CPPFLAGS := -Iinclude
 CXXFLAGS := -std=c++17 -O3 -DNDEBUG -Wall -Wextra -Wpedantic
 BIN := build
 .PHONY: all test sanitize demo clean
-all: $(BIN)/test_bloom $(BIN)/bloom_demo $(BIN)/study
+all: $(BIN)/test_bloom $(BIN)/bloom_demo $(BIN)/study $(BIN)/early_exit
 $(BIN):
 	mkdir -p $(BIN)
 $(BIN)/test_bloom: tests/test_bloom.cpp include/bloom.hpp | $(BIN)
@@ -11,6 +11,8 @@ $(BIN)/test_bloom: tests/test_bloom.cpp include/bloom.hpp | $(BIN)
 $(BIN)/bloom_demo: src/demo.cpp include/bloom.hpp | $(BIN)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 $(BIN)/study: src/study.cpp include/bloom.hpp | $(BIN)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $< -o $@
+$(BIN)/early_exit: src/early_exit.cpp include/bloom.hpp | $(BIN)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 test: $(BIN)/test_bloom $(BIN)/bloom_demo
 	./$(BIN)/test_bloom
