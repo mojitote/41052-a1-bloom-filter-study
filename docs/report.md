@@ -172,4 +172,3 @@ Agent verification includes compilation, tests, sanitizers, CSV checks and figur
 ### Reproduction record
 
 Repository: https://github.com/mojitote/41052-a1-bloom-filter-study. Main data: results/full-20260910/. Follow-up data: results/early-exit-20260910.csv. Machine, compiler and source fingerprints: results/environment.json. Exact commands and dependency setup: README.md. Numerical tables and figure source: figures/ and scripts/analyze.py. All external sources accessed on 10 September 2026.
-

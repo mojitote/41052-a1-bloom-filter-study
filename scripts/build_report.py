@@ -209,7 +209,7 @@ def main():
         unchanged=[name for name in parts if name not in replacements]
         assert all(z.read(name)==parts[name] for name in unchanged)
     assert args.template.read_bytes()==original
-    (ROOT/'docs/report.md').write_text('# Bloom filters in practice\n\n'+ '\n'.join(md)+'\n')
+    (ROOT/'docs/report.md').write_text(('# Bloom filters in practice\n\n'+ '\n'.join(md)).rstrip()+'\n')
     (ROOT/'docs/template_fidelity.json').write_text(json.dumps({'reference_sha256':hashlib.sha256(original).hexdigest(),'modified_parts':list(replacements),'added_figures':list(added),'preserved_original_parts':len(unchanged),'sections':2,'planned_pages':len(pages)+2},indent=2)+'\n')
     print(f'Created {args.out}; {len(pages)+2} planned pages; {len(unchanged)} original package parts unchanged.')
 
