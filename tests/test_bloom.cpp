@@ -33,11 +33,19 @@ int main() {
             require(trace.position(20, i) == expected20[i], "known index for 20");
         }
         bloom::BloomFilter wide_mask(64, 3, 7);
+
+
         wide_mask.insert(20); // includes position 46, which needs a 64-bit mask
-        require(wide_mask.set_bits() == 3,
-                "UINT64_C mask failed: a high bit was not set correctly");
+        if (wide_mask.set_bits() != 3) {
+            std::cerr << "UINT64_C mask failed: key=20, positions=11 31 46, "
+                      << "actual set bits=" << wide_mask.set_bits()
+                      << ", expected set bits=3; position 46 was not set correctly\n";
+            throw std::runtime_error("high-bit mask mismatch");
+        }
         require(wide_mask.contains(20),
                 "UINT64_C mask failed: inserted key was rejected");
+
+                
         for (std::size_t m : {1u, 7u, 63u, 64u, 65u, 127u, 1024u}) {
             for (std::size_t k : {1u, 3u, 64u}) {
                 bloom::BloomFilter f(m, k, 42);
