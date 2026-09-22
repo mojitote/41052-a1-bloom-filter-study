@@ -34,7 +34,10 @@ void print_checked_word(const bloom::BloomFilter& filter, std::uint64_t key) {
         marks[63 - p] = '^'; // bitset prints bit 63 on the left and bit 0 on the right
     }
     std::cout << std::string(prefix.size(), ' ') << marks << '\n';
-    std::cout << "  positions:";
+}
+
+void print_positions(const bloom::BloomFilter& filter, std::uint64_t key) {
+    std::cout << "positions:";
     for (std::size_t i = 0; i < filter.hashes(); ++i)
         std::cout << ' ' << filter.position(key, i);
     std::cout << '\n';
@@ -50,18 +53,21 @@ int main() {
     print_initial_words(f);
     for (auto x : {10, 20, 30}) {
         std::cout << "\n[insert key " << x << "]\n"
-                  << "positions:";
-        for (std::size_t i = 0; i < f.hashes(); ++i) std::cout << ' ' << f.position(x, i);
-        f.insert(x); std::cout << "; occupied=" << f.set_bits() << "/64\n";
+                  << "insert(" << x << ")\n";
+        print_positions(f, x);
+        f.insert(x);
+        std::cout << "occupied=" << f.set_bits() << "/64\n";
         print_words(f, x);
     }
     std::uint64_t fp = 31;
     while (!f.contains(fp)) ++fp;
     std::cout << "\n[lookup: inserted key 10]\n";
     std::cout << "contains(10)=" << f.contains(10) << " (inserted)\n";
+    print_positions(f, 10);
     print_checked_word(f, 10);
     std::cout << "\n[lookup: false-positive candidate " << fp << "]\n";
     std::cout << "contains(" << fp << ")=" << f.contains(fp)
               << " (NOT inserted: false positive)\n";
+    print_positions(f, fp);
     print_checked_word(f, fp);
 }
