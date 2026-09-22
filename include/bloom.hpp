@@ -28,11 +28,28 @@ public:
     void insert(std::uint64_t key) noexcept {
         for (std::size_t i = 0; i < hashes_; ++i) {
             const auto p = position(key, i);
-            // Invariant: insertion only sets bits. It never clears an old bit.
+        // Example: p = 70
+        // p / 64 = 1, so the target is words_[1].
+        // p % 64 = 6, so the target bit is bit 6 in that word.
+        //
+        // UINT64_C(1) << 6 creates a 64-bit mask:
+        //
+        //   bit index:  ... 6 5 4 3 2 1 0
+        //   mask:      ... 1 0 0 0 0 0 0
+        //
+        // Bitwise OR assignment then sets bit 6:
+        //
+        //   old word:  ... x x x x x x x
+        //   mask:      ... 0 1 0 0 0 0 0
+        //   result:    ... x 1 x x x x x
+        //
+        // Existing 1 bits stay 1, and existing 0 bits stay 0,
+        // except for the target bit, which becomes 1.
             words_[p / 64] |= UINT64_C(1) << (p % 64);
         }
     }
 
+    //main invariant ： once a bit required by an inserted key is set, it is never cleared.
     bool contains(std::uint64_t key) const noexcept {
         for (std::size_t i = 0; i < hashes_; ++i) {
             const auto p = position(key, i);

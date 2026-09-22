@@ -48,7 +48,18 @@ int main() {
                     inserted.push_back(x);
                     for (std::size_t i = 0; i < k; ++i) reference[f.position(x, i)] = true;
                     require(f.set_bits() >= before, "insertion cleared a bit");
-                    require(f.set_bits() == static_cast<std::size_t>(std::count(reference.begin(), reference.end(), true)), "bit packing disagrees with reference");
+                    const auto expected_set_bits = static_cast<std::size_t>(std::count(reference.begin(), reference.end(), true));
+                    const auto actual_set_bits = f.set_bits();
+                    if (actual_set_bits != expected_set_bits) {
+                        std::cerr << "bit packing mismatch: m=" << m
+                                  << ", k=" << k
+                                  << ", insertion=" << t
+                                  << ", key=" << x
+                                  << ", actual set bits=" << actual_set_bits
+                                  << ", reference set bits=" << expected_set_bits
+                                  << "\n  A previous bit was cleared; check the |= in BloomFilter::insert().\n";
+                        throw std::runtime_error("bit packing disagrees with reference");
+                    }
                     const auto after = f.set_bits();
                     f.insert(x);
                     require(f.set_bits() == after, "duplicate insertion changed bits");
