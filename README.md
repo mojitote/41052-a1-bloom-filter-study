@@ -74,13 +74,7 @@ The analysis validates row completeness, uniqueness, count semantics and exact-p
 | `results/environment.json` | Machine/compiler/flags and original source fingerprints |
 | `results/manifest.sha256` | Fingerprints of evidence and deliverables |
 | `figures/` | Regenerable PNG charts, summaries and derived break-even model |
-| [`docs/Bloom_Filter_Report.pdf`](docs/Bloom_Filter_Report.pdf) | Current report for reading and submission |
-| `docs/Bloom_Filter_Report_Optimized.docx` | Editable report in the supplied template |
-| `docs/report.md` | Searchable report text with figure links |
-| `docs/protocol.md` | Measurement design, exclusions and validity limits |
-| `docs/ai-use-log.md` | Actual AI review issues and fixes |
-| `docs/walkthrough.md` | Guide for the required personal 3–5 minute recording |
-| `docs/submission-checklist.md` | Deliverable status and rubric evidence map |
+The final report is submitted separately as a PDF using the supplied Word template.
 
 ## API and guarantees
 
@@ -92,30 +86,15 @@ bool possible = filter.contains(42);
 
 All inserted keys stay positive as long as the filter parameters/state are unchanged. Absent keys can be false positives. Insert and query cost O(k) logical work; absent queries can stop early. Storage is `8 * ceil(m/64)` bytes of bit-array payload. Duplicate insertions do not change the filter after the first insertion. The implementation deliberately has no deletion, resizing, concurrent mutation or cryptographic guarantee. Invalid zero sizes, zero hashes and hash counts above 64 are rejected.
 
-## Report regeneration
-
-The Word builder requires the user-supplied `A1.docx` **outside the repository** and `lxml`/`Pillow`. It patches a copy, preserving the original template's styles, cover art and footer. The template itself is not redistributed.
-
-```sh
-.venv/bin/python -m pip install -r requirements-docs.txt
-.venv/bin/python scripts/build_report.py --template /path/to/A1.docx
-```
-
-The prose is written for the archived run. Re-running analysis on new data is not sufficient to update every numerical interpretation in the report; review the text and captions as well. After any document change, update page-reference fields in Word and visually inspect the result before submission.
-
 ## Provenance and submission
 
-Core code, experiment automation, documentation and report drafting were produced with extensive OpenAI Codex assistance. See the report's AI use section and `docs/ai-use-log.md`. No personal video or spoken understanding demonstration has been fabricated. The author must record the required walkthrough and review the reflection before submitting.
+Core code and experiment automation were produced with extensive OpenAI Codex assistance. The final report contains the required AI use section. The author must record the required walkthrough and review the reflection before submitting.
 
 The GitHub repository is private. Give the marker access, or use an allowed source archive submission, before the deadline. The original assignment documents, virtual environment, compiled binaries and credentials are not included.
 
 The hash finalizer is adapted from Sebastiano Vigna's public-domain `splitmix64.c`: <https://prng.di.unimi.it/splitmix64.c>. The mixer has not been proven to provide independent hash positions for this application.
 
 ## September 22 revision: exact-pipeline query variants
-
-The current revised submission report is [`docs/Bloom_Filter_Report.pdf`](docs/Bloom_Filter_Report.pdf); read the PDF first.
-The editable Word version is `docs/Bloom_Filter_Report_Optimized.docx`, and `docs/report.md` contains the same text in searchable Markdown. The original report filename is synchronized with this revised version; the earlier
-version remains available in Git history. The original September 10 raw measurements remain unchanged.
 
 `contains_full_scan` is an experimental alternative to `contains`: both read the
 same packed storage and hash mapping. `src/pipeline_exit.cpp` compares the direct
@@ -135,13 +114,7 @@ positive counts. Summaries use four seed medians (seven repetitions each), paire
 ratios and descriptive Student t 95% intervals. The recorded input is
 `results/pipeline-exit-20260922.csv`; its summaries are `figures/pipeline_summary.*`.
 
-To reproduce the revised report, first run the original analysis command above,
-then `scripts/analyze_pipeline.py` on the recorded new CSV with its default output,
-and run `scripts/build_report.py --template /path/to/A1.docx`. The builder now writes
-`docs/Bloom_Filter_Report_Optimized.docx` by default. Document dependencies remain
-in `requirements-docs.txt`.
-
 At n=200,000 and k=7, full scanning improves exact lookup for all-absent queries
 but loses to early exit at 50% absent. The k=1 pipeline remains faster in the
-all-absent comparison. See report sections 2.7–2.9 for conditional recommendations.
-No branch-prediction or universal optimality claim follows from these timings.
+all-absent comparison. No branch-prediction or universal optimality claim follows
+from these timings.
