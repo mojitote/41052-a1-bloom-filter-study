@@ -74,7 +74,8 @@ The analysis validates row completeness, uniqueness, count semantics and exact-p
 | `results/environment.json` | Machine/compiler/flags and original source fingerprints |
 | `results/manifest.sha256` | Fingerprints of evidence and deliverables |
 | `figures/` | Regenerable PNG charts, summaries and derived break-even model |
-| `docs/Bloom_Filter_Report_Optimized.docx` | Current report in the supplied template |
+| [`docs/Bloom_Filter_Report.pdf`](docs/Bloom_Filter_Report.pdf) | Current report for reading and submission |
+| `docs/Bloom_Filter_Report_Optimized.docx` | Editable report in the supplied template |
 | `docs/report.md` | Searchable report text with figure links |
 | `docs/protocol.md` | Measurement design, exclusions and validity limits |
 | `docs/ai-use-log.md` | Actual AI review issues and fixes |
@@ -112,8 +113,8 @@ The hash finalizer is adapted from Sebastiano Vigna's public-domain `splitmix64.
 
 ## September 22 revision: exact-pipeline query variants
 
-The current revised submission report is `docs/Bloom_Filter_Report_Optimized.docx`;
-`docs/report.md` contains the same text. The original report filename is synchronized with this revised version; the earlier
+The current revised submission report is [`docs/Bloom_Filter_Report.pdf`](docs/Bloom_Filter_Report.pdf); read the PDF first.
+The editable Word version is `docs/Bloom_Filter_Report_Optimized.docx`, and `docs/report.md` contains the same text in searchable Markdown. The original report filename is synchronized with this revised version; the earlier
 version remains available in Git history. The original September 10 raw measurements remain unchanged.
 
 `contains_full_scan` is an experimental alternative to `contains`: both read the
