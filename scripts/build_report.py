@@ -95,9 +95,9 @@ page('2.7 Full scanning in the exact pipeline',[
  P('One hash still gives the fastest tested all-absent lookup: its speedup at 200,000 keys is {one}. Thus, improving the seven-hash code does not change the answer to the follow-up question: lowest error does not imply fastest lookup. The one-hash control shows much smaller differences between query versions, but these measurements do not identify a hardware cause. Configuration order was fixed on an active desktop.'.format(one=ci(up(200000,1,1.)['early_speedup']))),
 ])
 page('2.8 Interpretation and limits',[
- P('Let q be the fraction of queries for absent keys and p the false-positive rate. The fraction r that reaches the exact set is approximately:'),
+ P('The experiments show that a Bloom filter helps only when it prevents enough exact-set lookups to repay its own checking cost. To make that trade-off explicit, let q be the fraction of queries for absent keys and p the false-positive rate. The fraction r that still reaches the exact set is approximately:'),
  Q('reaching'),
- P('All present keys and the false positives require a set lookup. Let L be an extra cost per set lookup, and let T denote average time per input query. The subscripts identify set-only lookup and Bloom followed by the set. Using the measured times at L = 0:'),
+ P('All present keys and false positives still require a set lookup, while true negatives are rejected by the filter. Let L be the extra cost of one exact-set lookup, and let T denote average time per input query. The subscripts identify set-only lookup and Bloom followed by the set. Adding rL to the filtered pipeline gives the cost model below:'),
  Q('cost'),
  P('For r < 1, the extra cost L* at which both methods take equal time is:'),
  Q('break_even'),

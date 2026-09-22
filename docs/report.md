@@ -152,13 +152,13 @@ One hash still gives the fastest tested all-absent lookup: its speedup at 200,00
 
 ## 2.8 Interpretation and limits
 
-Let q be the fraction of queries for absent keys and p the false-positive rate. The fraction r that reaches the exact set is approximately:
+The experiments show that a Bloom filter helps only when it prevents enough exact-set lookups to repay its own checking cost. To make that trade-off explicit, let q be the fraction of queries for absent keys and p the false-positive rate. The fraction r that still reaches the exact set is approximately:
 
 $$
 r \approx  (1 - q) + qp
 $$
 
-All present keys and the false positives require a set lookup. Let L be an extra cost per set lookup, and let T denote average time per input query. The subscripts identify set-only lookup and Bloom followed by the set. Using the measured times at L = 0:
+All present keys and false positives still require a set lookup, while true negatives are rejected by the filter. Let L be the extra cost of one exact-set lookup, and let T denote average time per input query. The subscripts identify set-only lookup and Bloom followed by the set. Adding rL to the filtered pipeline gives the cost model below:
 
 $$
 {T}_{\mathrm{set}}(L) = {T}_{\mathrm{set}}(0) + L ,     {T}_{\mathrm{filtered}}(L) = {T}_{\mathrm{filtered}}(0) + rL
