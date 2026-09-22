@@ -45,15 +45,18 @@ int main() {
               << ", hashes=" << f.hashes()
               << ", seed=" << seed << '\n';
     for (auto x : {10, 20, 30}) {
-        std::cout << "insert " << x << "; positions:";
+        std::cout << "\n[insert key " << x << "]\n"
+                  << "positions:";
         for (std::size_t i = 0; i < f.hashes(); ++i) std::cout << ' ' << f.position(x, i);
         f.insert(x); std::cout << "; occupied=" << f.set_bits() << "/64\n";
         print_words(f, x);
     }
     std::uint64_t fp = 31;
     while (!f.contains(fp)) ++fp;
+    std::cout << "\n[lookup: inserted key 10]\n";
     std::cout << "contains(10)=" << f.contains(10) << " (inserted)\n";
     print_checked_word(f, 10);
+    std::cout << "\n[lookup: false-positive candidate " << fp << "]\n";
     std::cout << "contains(" << fp << ")=" << f.contains(fp)
               << " (NOT inserted: false positive)\n";
     print_checked_word(f, fp);
