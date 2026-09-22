@@ -42,6 +42,16 @@ public:
         return true; // Possibly present; this is not an exact membership proof.
     }
 
+    // Experimental alternative: same storage and mapping, no source-level early return.
+    bool contains_full_scan(std::uint64_t key) const noexcept {
+        bool present = true;
+        for (std::size_t i = 0; i < hashes_; ++i) {
+            const auto p = position(key, i);
+            present &= (words_[p / 64] & (UINT64_C(1) << (p % 64))) != 0;
+        }
+        return present;
+    }
+
     std::size_t bits() const noexcept { return bits_; }
     std::size_t hashes() const noexcept { return hashes_; }
     std::size_t storage_bytes() const noexcept { return words_.size() * sizeof(std::uint64_t); }

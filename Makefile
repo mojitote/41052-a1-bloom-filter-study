@@ -3,7 +3,7 @@ CPPFLAGS := -Iinclude
 CXXFLAGS := -std=c++17 -O3 -DNDEBUG -Wall -Wextra -Wpedantic
 BIN := build
 .PHONY: all test sanitize demo clean
-all: $(BIN)/test_bloom $(BIN)/bloom_demo $(BIN)/study $(BIN)/early_exit
+all: $(BIN)/pipeline_exit $(BIN)/test_bloom $(BIN)/bloom_demo $(BIN)/study $(BIN)/early_exit
 $(BIN):
 	mkdir -p $(BIN)
 $(BIN)/test_bloom: tests/test_bloom.cpp include/bloom.hpp | $(BIN)
@@ -24,3 +24,6 @@ demo: $(BIN)/bloom_demo
 	./$(BIN)/bloom_demo --what-breaks
 clean:
 	rm -rf $(BIN)
+
+$(BIN)/pipeline_exit: src/pipeline_exit.cpp include/bloom.hpp | $(BIN)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $< -o $@

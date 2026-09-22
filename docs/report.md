@@ -2,19 +2,19 @@
 
 ## 1 What I built
 
-This project implements an insertion-only Bloom filter in C++17 and studies the trade-off between accuracy, memory and query time. The main finding is that the parameter giving the lowest false-positive rate did not give the fastest exact lookup pipeline. A follow-up experiment also found that checking fewer bits could take longer than checking every bit.
+This C++17 project studies an insertion-only Bloom filter. Choose parameters for the error target and total query cost: seven hashes gave about 0.82% false positives at 10 bits per key, while one hash gave higher exact throughput on tested miss-heavy workloads. Full scanning improved the seven-hash pipeline for all-absent queries but lost to early exit at 50% absent.
 
-The filter stores unsigned 64-bit keys in a packed vector of 64-bit words. Its parameters are the number of bits m, the number of hash positions k and a seed. The public API provides insert and contains. A negative result is definite; a positive result means possibly present. Deletion, automatic resizing, persistence and concurrent mutation are outside the scope.
+The filter accepts unsigned 64-bit keys and stores bit markers, not the keys, in packed 64-bit words. Parameters are bit count m, hash count k and seed. insert adds markers; contains returns definitely absent or possibly present. Deletion, resizing, persistence and concurrent mutation are outside scope.
 
-Each position is produced with a separately salted SplitMix64 finalizer, then reduced modulo m. The mixer constants follow Vigna’s public-domain implementation [3]. These are deterministic, non-cryptographic hashes. Different salts do not prove independence. The study tests their behaviour on controlled inputs rather than claiming a universal hash guarantee.
+Each position uses a separately salted SplitMix64 finalizer reduced modulo m. Constants follow Vigna [3]. Hashing is deterministic and non-cryptographic; distinct salts do not prove independence. The experiments test controlled inputs, not a universal hash guarantee.
 
 | Location | Purpose |
 | --- | --- |
 | include/bloom.hpp | Packed storage, hashing and membership |
 | src/study.cpp | Data generation, baselines and measurements |
 | tests/test_bloom.cpp | Deterministic and randomized checks |
-| src/early_exit.cpp | Follow-up early-exit ablation |
-| scripts/analyze.py | Validation, summaries and plots |
+| src/pipeline_exit.cpp | Paired exact-pipeline follow-up |
+| scripts/analyze*.py | Validation, summaries and plots |
 
 ## 1.1 Correctness and the difficult step
 
@@ -24,7 +24,7 @@ The word index is position / 64 and the bit offset is position % 64. UINT64_C(1)
 
 The deterministic demo inserts 10, 20 and 30 into m = 64, k = 3, seed = 7. Key 10 uses positions 30, 14 and 16. The uninserted key 37 is reported present, demonstrating a legitimate false positive. A separate mutation demo replaces |= with = and makes an inserted key fail. This mutation is deliberately broken demonstration code, not a defect found in the main implementation.
 
-The final test suite passes 343,406 checks in both optimized and AddressSanitizer/UndefinedBehaviorSanitizer builds. It covers empty filters, invalid parameters, duplicate insertions, keys 0 and UINT64_MAX, word boundaries, saturation and exact-pipeline equivalence on each key. The accuracy study additionally checks 11,560,000 inserted-key memberships with zero false negatives. Tests support the argument above; they do not replace it.
+The final test suite passes 464,427 checks in both optimized and AddressSanitizer/UndefinedBehaviorSanitizer builds. It covers empty filters, invalid parameters, duplicate insertions, keys 0 and UINT64_MAX, word boundaries, saturation, full-scan agreement and exact-pipeline equivalence on each key. The accuracy study additionally checks 11,560,000 inserted-key memberships with zero false negatives. Tests support the argument above; they do not replace it.
 
 ## 2 Empirical study
 
@@ -113,27 +113,65 @@ The main run unexpectedly measured absent Bloom queries as slower than present q
 
 At n = 200,000, an absent early-exit query checks about 1.996 positions on average but takes 41.69 ± 1.96 ns. The full scan checks all seven positions and takes 23.58 ± 0.50 ns. The smaller dataset shows the same direction. Fewer logical probes therefore do not imply lower elapsed time for this compiled implementation.
 
-The result is consistent with differences in branching and generated machine code. It does not isolate branch prediction: no branch counters or assembly analysis were collected, and the diagnostic layout has a different allocation address. Full scanning is a promising optimization to test in the exact pipeline, but that optimized pipeline has not been measured. The main results remain those of the original early-exit implementation.
+The result is consistent with differences in branching and generated machine code. It does not isolate branch prediction: no branch counters or assembly analysis were collected, and the diagnostic layout has a different allocation address. Section 2.7 now tests both versions inside exact pipelines using one shared Bloom object. The original measurements are retained separately; no timing values from the two runs are pooled.
 
-## 2.7 Interpretation and limits
+## 2.7 Full scanning in the exact pipeline
+
+![Figure 4. Separately dated paired experiment. Values above 1 indicate faster exact lookup than the set alone. Error bars are 95% intervals across four seed-level ratios.](../figures/pipeline_exit.png)
+
+The follow-up uses contains and contains_full_scan on the same Bloom object and the same exact set. Both variants have identical positions, contents and backend-call counts. The full scan accumulates every bit test with &= and has no source-level early return. Each query is checked against the exact set before timing.
+
+The design uses two set sizes, k = 1 or 7, four absent fractions, four seeds, seven repetitions and 200,000 queries per repetition (1,344 timing rows). Generation and validation are outside timing. Methods are warmed up and randomly ordered. Ratios are paired within seed after taking repetition medians. k = 1 is a control where both variants check one position.
+
+| n = 200,000; k = 7 | Set / early time | Set / full time |
+| --- | --- | --- |
+| 50% absent | 0.732 ± 0.006 | 0.629 ± 0.004 |
+| 90% absent | 0.676 ± 0.016 | 1.011 ± 0.028 |
+| 100% absent | 0.707 ± 0.041 | 1.282 ± 0.098 |
+
+## 2.7.1 Results and scope
+
+For 200,000 keys and all-absent queries, full scanning speeds up the exact pipeline by 1.812 ± 0.034 times relative to early exit. Relative to the set alone, full scanning gives 1.282 ± 0.098 times speedup; early exit gives 0.707 ± 0.041. Thus the original component-level observation can translate into an end-to-end benefit.
+
+The benefit depends on workload. At 50% absent queries, the full/early speed ratio is 0.859 ± 0.006: full scanning is slower. At 90% absent queries, its speedup over the direct set is 1.011 ± 0.028; the interval spans 1. Neither result supports a universal full-scan recommendation.
+
+The smaller set also benefits at k = 7 with all-absent queries (full-scan/set speedup 1.217 ± 0.009). However, k = 1 with early exit remains faster in the all-absent workload at n = 200,000 (2.726 ± 0.055 times the set). Lower error and faster execution remain different objectives.
+
+The shared object removes the separate Bloom allocation from the original diagnostic comparison. k = 1 shows much smaller version differences than k = 7 on miss-heavy workloads. This narrows the explanation, but does not isolate branch prediction, vectorization or instruction scheduling. Compiler output and hardware counters were not analysed. Fixed configuration order, background load and four seeds limit generalisation.
+
+## 2.8 Interpretation and limits
 
 Let q be the absent-query fraction and p the false-positive rate. The approximate backend-call fraction is r = (1 − q) + qp. Adding cost L per backend call gives Tset(L) = Tset(0) + L and Tfiltered(L) = Tfiltered(0) + rL. For r < 1, the break-even additional cost is L* = (Tfiltered(0) − Tset(0))/(1 − r).
 
 Using paired measurements at n = 20,000, k = 7 and all-absent queries gives L* between 11.18 and 12.17 ns across seeds. This is a derived threshold under a constant extra-cost assumption. It is not a database or network measurement; real backends can have batching, caching, concurrency and different hit/miss costs.
 
-The machine was an Apple M2 with 8 GB memory, macOS 14.4.1 and Apple Clang 15, using C++17 and -O3. CPU affinity, power state and background load were uncontrolled. Some intervals are wide. Warm queries, two set sizes and uniform integer keys do not represent cold storage, skew or adversarial inputs. The shared generator/filter mixer also limits independence conclusions.
+Both runs used an Apple M2 with 8 GB memory, macOS 14.4.1 and Apple Clang 15, using C++17 and -O3. CPU affinity, power state and background load were uncontrolled. Some intervals are wide. Warm queries, two set sizes and uniform integer keys do not represent cold storage, skew or adversarial inputs. The shared generator/filter mixer also limits independence conclusions.
 
 Construction times are separate single observations, excluded from query speedups. Each set-build time is repeated across k rows in the memory CSV, not independently remeasured. Recommendation: use about seven hashes for a 1% error target at 10 bits per key, but benchmark cheaper settings for exact in-memory throughput. Recheck capacity and workload assumptions.
+
+## 2.9 Choosing a configuration
+
+First decide whether approximate membership is acceptable or exact answers are required. For an approximate filter, choose the bit budget and k to meet an error target. For exact answers, retain the backend and measure total lookup time; the filter adds memory and only saves some backend calls.
+
+| Goal or workload | Recommendation within tested scope |
+| --- | --- |
+| About 1% false positives at 10 bits/key | Use about 7 hashes at design capacity; monitor occupancy and distinct insertions. |
+| High exact throughput with 90–100% absent queries | Test cheaper hashing first. k = 1 outperformed k = 7 in the paired follow-up. |
+| All queries present | Prefer direct set lookup in these tests; the filter could not avoid backend calls. |
+| k = 7 required, all queries absent | Full scanning improved the exact pipeline in both tested sizes. |
+| Mixed queries or another backend | Benchmark both query variants and the direct baseline; full scanning lost to early exit at 50% absent. |
+
+These are conditional decisions for the measured C++17 implementation and integer workloads, not universal best parameters. A slower backend can make stronger filtering worthwhile. Capacity growth, key distribution, compiler or machine changes require new measurements. The study did not compare alternative mixer constants or prove their optimality.
 
 ## 3 What I learned
 
 ### 3.1 The objective determines the parameter
 
-The most useful lesson is the difference between optimizing a component and optimizing the whole pipeline. Seven hashes gave a false-positive rate of 0.821%, whereas one hash gave 9.502%. However, for 200,000 keys and all-absent queries, the exact pipeline with one hash was about 2.71 times as fast as the direct set. The seven-hash pipeline had no clear speed advantage. Reducing false positives has value only in relation to the work avoided.
+The most useful lesson is the difference between optimizing a component and optimizing the whole pipeline. Seven hashes gave a false-positive rate of 0.821%, whereas one hash gave 9.502%. However, for 200,000 keys and all-absent queries, the exact pipeline with one hash was about 2.71 times as fast as the direct set. The original seven-hash early-exit pipeline had no clear speed advantage. Reducing false positives has value only in relation to the work avoided.
 
 ### 3.2 Fewer operations can still take longer
 
-The early-exit experiment makes this lesson concrete. The absent-query path reduced the mean logical probes from seven to about two, yet the full scan was faster. Counting source-level operations is useful, but it leaves out how a processor executes branches and how a compiler transforms loops. The evidence supports a performance difference; it does not justify naming one hardware cause as proven.
+The early-exit experiment makes this lesson concrete. The absent-query path reduced the mean logical probes from seven to about two, yet the full scan was faster. Counting source-level operations is useful, but it leaves out how a processor executes branches and how a compiler transforms loops. The new shared-storage pipeline comparison strengthens the practical result: full scanning helps at 100% absent queries but loses to early exit at 50%. It still does not identify one hardware cause as proven.
 
 ### 3.3 Correctness and usefulness are separate
 
@@ -147,17 +185,15 @@ The apparent best hash count at 16 bits per key was another reminder to examine 
 
 Finally, test counts do not by themselves establish test independence. The first bit-vector oracle reused the filter’s position helper, so it could detect packing errors while sharing a hash-indexing error. Review led to fixed known-answer checks and per-key exact-pipeline checks. This gives stronger evidence, while still leaving the statistical quality of the salted hash family as an assumption rather than a proof.
 
-These are evidence-based lessons from the project, not claims that every implementation detail has been independently mastered. The required spoken walkthrough should demonstrate the insertion invariant, bit indexing and the |= mutation directly in the code. The distinction matters because an AI-assisted report can be more polished than the author’s current understanding.
-
 ## 4 AI use
 
-I used OpenAI Codex extensively for topic selection, implementation, tests, experimental design and execution, analysis, documentation and report drafting. It also adapted the Word template and uploaded the repository. Most code and report text were AI-generated; I do not claim to have independently written every line or run every command.
+I used OpenAI Codex extensively for topic selection, implementation, tests, experimental design and execution, analysis, documentation and report drafting. It also adapted the Word template and uploaded the repository. The September 22 revision added the full-scan API, equivalence checks, paired pipeline experiment and conditional recommendations with Codex assistance. Most code and report text were AI-generated; I do not claim to have independently written every line or run every command.
 
 The first generated reference test reused BloomFilter::position. It checked packed storage but could share an indexing bug. AI-assisted review added fixed mixer/index vectors and per-key equality between the exact pipeline and the set. The initial version is preserved in commit 93063ae; the correction is visible in the test diff.
 
 The analysis script also assumed SciPy and Matplotlib were installed. Execution failed with ModuleNotFoundError for scipy, then matplotlib. The fix used explicit t critical values for the supported seed counts and installed plotting dependencies locally. Commands, package versions and successful output are recorded. The raw measurements were unchanged.
 
-Agent verification includes compilation, tests, sanitizers, CSV checks and figure regeneration. It does not establish my personal understanding. Hash independence and the hardware cause of the timing results remain unproven. I need to demonstrate the code explanations myself in the walkthrough. The deliberate |= mutation is an educational example, not an accidental AI bug.
+Codex ran compilation, tests, sanitizers, CSV checks and figure regeneration. During code review, I worked through packed bit indexing, the insertion invariant and the query logic. I relied on the published mixer constants rather than deriving them; the study does not prove hash independence or identify the hardware cause of the timing differences. The deliberate |= mutation is an educational example, not an accidental AI bug.
 
 ## References
 
@@ -171,4 +207,4 @@ Agent verification includes compilation, tests, sanitizers, CSV checks and figur
 
 ### Reproduction record
 
-Repository: https://github.com/mojitote/41052-a1-bloom-filter-study. Main data: results/full-20260910/. Follow-up data: results/early-exit-20260910.csv. Machine, compiler and source fingerprints: results/environment.json. Exact commands and dependency setup: README.md. Numerical tables and figure source: figures/ and scripts/analyze.py. All external sources accessed on 10 September 2026.
+Repository: https://github.com/mojitote/41052-a1-bloom-filter-study. Main data: results/full-20260910/. Follow-up data: results/early-exit-20260910.csv. New exact-pipeline data: results/pipeline-exit-20260922.csv; analysis: scripts/analyze_pipeline.py. Original environment: results/environment.json; revision metadata: results/upgrade-environment-20260922.json. Exact commands and dependency setup: README.md. Numerical tables and figure source: figures/ and scripts/analyze.py. All external sources accessed on 10 September 2026.

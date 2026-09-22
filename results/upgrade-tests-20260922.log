@@ -1,0 +1,17 @@
+c++ -Iinclude -std=c++17 -O3 -DNDEBUG -Wall -Wextra -Wpedantic src/pipeline_exit.cpp -o build/pipeline_exit
+c++ -Iinclude -std=c++17 -O3 -DNDEBUG -Wall -Wextra -Wpedantic tests/test_bloom.cpp -o build/test_bloom
+c++ -Iinclude -std=c++17 -O3 -DNDEBUG -Wall -Wextra -Wpedantic src/demo.cpp -o build/bloom_demo
+c++ -Iinclude -std=c++17 -O3 -DNDEBUG -Wall -Wextra -Wpedantic src/study.cpp -o build/study
+c++ -Iinclude -std=c++17 -O3 -DNDEBUG -Wall -Wextra -Wpedantic src/early_exit.cpp -o build/early_exit
+./build/test_bloom
+PASS 464427 checks; large-set false positives=663/90000
+./build/bloom_demo --what-breaks
+insert 10; positions: 30 14 16; occupied=3/64
+insert 20; positions: 11 31 46; occupied=6/64
+insert 30; positions: 32 0 24; occupied=9/64
+contains(10)=1 (inserted)
+contains(37)=1 (NOT inserted: false positive)
+Mutation |= to =: inserted key 10, correct=1, broken=0
+c++ -Iinclude -std=c++17 -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer tests/test_bloom.cpp -o build/test_sanitize
+./build/test_sanitize
+PASS 464427 checks; large-set false positives=663/90000

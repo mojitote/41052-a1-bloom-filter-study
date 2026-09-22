@@ -35,3 +35,12 @@ The `|=` to `=` example was constructed deliberately to demonstrate the no-false
 ## Human understanding boundary
 
 The student selected the topic and requested extensive AI assistance. The session does not establish that the student can already explain every line. `walkthrough.md` supplies a route for learning and demonstrating the code. Before submission the author should review the reflection and disclose any remaining uncertainty honestly. The video must use the author's own explanation; no synthetic personal walkthrough has been created.
+
+## September 22 revision
+
+At the user's request, Codex tightened the central conclusion and storage wording,
+added contains_full_scan with the same storage/mapping, expanded equivalence tests,
+and ran a separate exact-pipeline experiment plus analysis. Codex generated the
+new figure, updated the template-based report and performed rendering QA. These
+are agent-performed steps, not a claim that the student independently implemented
+or measured them. The experiment tests pipeline impact, not hardware causation.

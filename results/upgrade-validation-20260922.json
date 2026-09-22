@@ -1,0 +1,16 @@
+{
+  "date": "2026-09-22",
+  "report_pages": 18,
+  "template_preserved_parts": 18,
+  "page_images_visually_inspected": true,
+  "internal_review_paragraph_removed": true,
+  "original_report_filename_synchronized": true,
+  "optimized_and_sanitizer_assertion_checks_each": 464427,
+  "pipeline_rows": 1344,
+  "pipeline_per_query_equivalence_checks": 12800000,
+  "pipeline_asan_ubsan_passed": true,
+  "raw_original_measurements_unchanged": true,
+  "new_summary_reproduced_exactly": true,
+  "source_hashes_verified": true,
+  "no_hardware_cause_claim": true
+}

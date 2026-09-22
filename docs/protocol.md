@@ -37,3 +37,24 @@ This supports an observation about these compiled variants. It does not isolate 
 ## Limits and possible follow-ups
 
 Only one active desktop machine, two set sizes, one integer key family and one standard-library implementation were measured. CPU placement, power state and background load were not held fixed. Construction/build order for parameter groups is not randomized, and drift between groups remains possible. The broad intervals are retained rather than removed as outliers. Stronger future work would use independent hash families, skewed and string keys, more seeds/machines, controlled power and load, and hardware counters. The break-even backend model adds a constant cost per actual backend call; it is not a measured storage service.
+
+## September 22 exact-pipeline follow-up
+
+Purpose: determine whether the earlier isolated full-scan observation transfers
+to exact lookup, removing its separate Bloom-storage allocation. This follow-up
+was designed after inspecting the original measurements; it is not a pre-registered
+hypothesis and does not replace them.
+
+Both methods query the same BloomFilter instance and exact set. Design: n=20,000
+or 200,000; m=10n; k=1 or 7; absent fractions 0, .5, .9, 1; seeds 1–4; 200,000
+queries; 7 repetitions; 3 randomly ordered methods after warm-up. Query generation
+is identical across k within each seed/n/fraction. Disjoint counter ranges passed
+through the bijective mixer guarantee negatives. Each query is checked against
+the exact set and both filter variants before timing. Per-query checks and counts
+are outside timing; timed totals are checked and consumed in a volatile sink.
+
+Analysis uses seed medians and paired ratios, with four-seed t intervals. k=1
+controls for the case of exactly one bit check in both versions. Method order
+is randomized within a configuration; configuration order is fixed. CPU affinity,
+power and background load are uncontrolled. No hardware counters are collected.
+New results are archived separately, with their own environment/source record.

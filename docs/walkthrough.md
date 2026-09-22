@@ -53,3 +53,12 @@ make demo
 7. 为什么 250 KB 和 6.4 MB 的比较不能直接说 exact pipeline 节省了同样多的内存？
 
 目前没有生成你的个人视频。最终提交还需要你录制并提供视频文件或 unlisted 链接。
+
+## September 22 补充
+
+当前报告为 Bloom_Filter_Report_Optimized.docx。新函数 contains_full_scan 和
+contains 使用同一个 words_ 和 position；区别是前者用 bool 的 &= 累积每次
+检查，不提前 return。新实验 src/pipeline_exit.cpp 比较两个精确流程。
+20 万元素、k=7、全部查询不存在时，完整扫描约比直接查集合快 1.28 倍；
+50% 不存在时却比提前退出慢。不要把这解释为完整扫描总是更快，或已证明
+分支预测是原因。录制时仍优先讲清原始 insert/contains 和不变量。

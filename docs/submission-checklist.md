@@ -20,3 +20,9 @@ Before submission:
 - Open the Word report, verify its appearance on your machine, and update page-reference fields if Word prompts.
 
 No assignment submission to the LMS has been made.
+
+September 22 revision: use `docs/Bloom_Filter_Report_Optimized.docx` as the current
+report; `Bloom_Filter_Report.docx` contains the identical current revision. Include the new
+pipeline CSV, analyzer and figure. `results/delivery-validation.json` describes
+the September 10 delivery only; current checks are recorded separately in
+`results/upgrade-validation-20260922.json`.

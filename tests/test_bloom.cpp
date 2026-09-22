@@ -37,6 +37,7 @@ int main() {
                 bloom::BloomFilter f(m, k, 42);
                 require(f.storage_bytes() == 8 * (m / 64 + (m % 64 != 0)), "word rounding");
                 require(!f.contains(0), "empty filter");
+                require(!f.contains_full_scan(0), "empty full scan");
                 std::vector<bool> reference(m, false);
                 std::vector<std::uint64_t> inserted;
                 std::mt19937_64 rng(m + k);
@@ -56,6 +57,7 @@ int main() {
                         auto y = rng(); bool expected = true;
                         for (std::size_t i = 0; i < k; ++i) expected = expected && reference[f.position(y, i)];
                         require(f.contains(y) == expected, "membership differs from bit oracle");
+                        require(f.contains_full_scan(y) == expected, "full scan differs from bit oracle");
                     }
                 }
             }
@@ -70,6 +72,7 @@ int main() {
         for (std::uint64_t i = 0; i < 100000; ++i) {
             auto x = bloom::mix64(i);
             require(a.contains(x) == b.contains(x), "seed reproducibility");
+            require(a.contains_full_scan(x) == a.contains(x), "full scan equivalence");
             if (exact.count(x)) require(a.contains(x), "large-set false negative");
             else fp += a.contains(x);
             require((a.contains(x) && exact.count(x) != 0) == (exact.count(x) != 0),

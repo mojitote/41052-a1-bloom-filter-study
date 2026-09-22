@@ -24,7 +24,7 @@ make sanitize
 ./build/bloom_demo --what-breaks
 ```
 
-`make test` performs 343,406 checks and the mutation demonstration. Sanitizers cover the core test suite; sanitizer binaries are never used for timing. `make sanitize` requires compiler support for AddressSanitizer and UndefinedBehaviorSanitizer.
+`make test` performs 464,427 checks and the mutation demonstration. Sanitizers cover the core test suite; sanitizer binaries are never used for timing. `make sanitize` requires compiler support for AddressSanitizer and UndefinedBehaviorSanitizer.
 
 The deterministic demo shows that uninserted key 37 can return true and that replacing `|=` with `=` loses an inserted key. The intentionally broken mutation is isolated in the demo.
 
@@ -74,7 +74,7 @@ The analysis validates row completeness, uniqueness, count semantics and exact-p
 | `results/environment.json` | Machine/compiler/flags and original source fingerprints |
 | `results/manifest.sha256` | Fingerprints of evidence and deliverables |
 | `figures/` | Regenerable PNG charts, summaries and derived break-even model |
-| `docs/Bloom_Filter_Report.docx` | Report in the supplied template |
+| `docs/Bloom_Filter_Report_Optimized.docx` | Current report in the supplied template |
 | `docs/report.md` | Searchable report text with figure links |
 | `docs/protocol.md` | Measurement design, exclusions and validity limits |
 | `docs/ai-use-log.md` | Actual AI review issues and fixes |
@@ -109,3 +109,38 @@ Core code, experiment automation, documentation and report drafting were produce
 The GitHub repository is private. Give the marker access, or use an allowed source archive submission, before the deadline. The original assignment documents, virtual environment, compiled binaries and credentials are not included.
 
 The hash finalizer is adapted from Sebastiano Vigna's public-domain `splitmix64.c`: <https://prng.di.unimi.it/splitmix64.c>. The mixer has not been proven to provide independent hash positions for this application.
+
+## September 22 revision: exact-pipeline query variants
+
+The current revised submission report is `docs/Bloom_Filter_Report_Optimized.docx`;
+`docs/report.md` contains the same text. The original report filename is synchronized with this revised version; the earlier
+version remains available in Git history. The original September 10 raw measurements remain unchanged.
+
+`contains_full_scan` is an experimental alternative to `contains`: both read the
+same packed storage and hash mapping. `src/pipeline_exit.cpp` compares the direct
+set with both exact pipelines on identical queries. This is a separately dated
+run; do not combine its timings with the earlier run.
+
+```sh
+make all test sanitize
+./build/pipeline_exit results/my-pipeline-run.csv
+.venv/bin/python scripts/analyze_pipeline.py results/my-pipeline-run.csv --out figures/my-pipeline-run
+```
+
+The executable refuses to overwrite an existing CSV. It checks per-key answer
+equivalence before timing and validates all timed positive counts. Analysis checks
+all 1,344 unique configurations/repetitions, matching backend-call counts and
+positive counts. Summaries use four seed medians (seven repetitions each), paired
+ratios and descriptive Student t 95% intervals. The recorded input is
+`results/pipeline-exit-20260922.csv`; its summaries are `figures/pipeline_summary.*`.
+
+To reproduce the revised report, first run the original analysis command above,
+then `scripts/analyze_pipeline.py` on the recorded new CSV with its default output,
+and run `scripts/build_report.py --template /path/to/A1.docx`. The builder now writes
+`docs/Bloom_Filter_Report_Optimized.docx` by default. Document dependencies remain
+in `requirements-docs.txt`.
+
+At n=200,000 and k=7, full scanning improves exact lookup for all-absent queries
+but loses to early exit at 50% absent. The k=1 pipeline remains faster in the
+all-absent comparison. See report sections 2.7–2.9 for conditional recommendations.
+No branch-prediction or universal optimality claim follows from these timings.
