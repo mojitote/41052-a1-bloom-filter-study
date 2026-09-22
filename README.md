@@ -74,7 +74,7 @@ The analysis validates row completeness, uniqueness, count semantics and exact-p
 | `results/environment.json` | Machine/compiler/flags and original source fingerprints |
 | `results/manifest.sha256` | Fingerprints of evidence and deliverables |
 | `figures/` | Regenerable PNG charts, summaries and derived break-even model |
-The final report is submitted separately as a PDF using the supplied Word template.
+The final report is [`docs/Bloom_Filter_Report.pdf`](docs/Bloom_Filter_Report.pdf). Read the PDF first; editable report sources are intentionally excluded from this repository.
 
 ## API and guarantees
 
