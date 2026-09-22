@@ -4,6 +4,8 @@
 
 This project implements a packed, seeded Bloom filter for 64-bit integer keys and compares accuracy, capacity, requested storage, and lookup time against an exact hash set. The report follows the supplied Word template.
 
+**Final report:** [`Bloom_Filter_Report.pdf`](Bloom_Filter_Report.pdf)
+
 ## Main findings
 
 - At 10 bits/key, seven hashes produced **0.821%** false positives. Doubling the design insertion count raised this to **13.841%**.
@@ -74,7 +76,7 @@ The analysis validates row completeness, uniqueness, count semantics and exact-p
 | `results/environment.json` | Machine/compiler/flags and original source fingerprints |
 | `results/manifest.sha256` | Fingerprints of evidence and deliverables |
 | `figures/` | Regenerable PNG charts, summaries and derived break-even model |
-The final report is [`docs/Bloom_Filter_Report.pdf`](docs/Bloom_Filter_Report.pdf). Read the PDF first; editable report sources are intentionally excluded from this repository.
+The final report is [`Bloom_Filter_Report.pdf`](Bloom_Filter_Report.pdf) in the repository root. Read the PDF first; editable report sources are intentionally excluded from this repository.
 
 ## API and guarantees
 
