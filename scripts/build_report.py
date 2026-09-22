@@ -41,17 +41,17 @@ page('1.1 Implementation details and correctness',[
  P('The tests pass 464,427 checks in both the optimised build and the AddressSanitizer/UndefinedBehaviorSanitizer build. They cover empty filters, invalid settings, repeated insertions, keys 0 and UINT64_MAX, word boundaries and full filters. They also check that both query versions agree and that the filter followed by an exact set gives the correct answer for each tested key. The accuracy experiment checks another 11,560,000 inserted-key lookups with no false negatives.'),
 ])
 page('2 Empirical study',[
- H('2.1 Questions and initial hypotheses'),
- P('Here, n counts distinct inserted keys, m is the array size in bits, and k is the number of hash positions per key. The hypotheses are:'),
- P('H1: At a fixed bit budget per key, increasing k should first lower and then raise the false-positive rate. H2: Exceeding design capacity should increase false positives without rejecting inserted keys. H3: Filtering should reduce total query time when skipped exact-set lookups save more time than filtering costs.'),
+ H('2.1 Main question and theoretical prediction'),
+ P('The main question is how closely measured false-positive rates follow theory as the hash count and inserted-key count change. Here, n counts distinct inserted keys, m is the array size in bits, and k is the number of hash positions per key.'),
+ P('The hypothesis is that measured rates follow the predicted curve: increasing k first lowers and then raises the rate, while adding keys to a fixed filter raises it. Checking that inserted keys are never rejected tests implementation correctness.'),
  P('With independent, uniform hashes, a particular bit stays zero with probability:'),
  Q('zero'),
  P('The usual approximation for the false-positive rate p is [1, 2]:'),
  Q('fpr'),
  P('This assumes approximately independent queried bits. Let b be bits per inserted key and k* the hash count that minimises the approximation:'),
  Q('optimal'),
- P('At 10 bits per key, k* is about 6.93. Seven hashes therefore targets low error; the formula does not optimise query time.'),
- T(['Experiment','Controlled design'],[['Hash sweep','n = 20,000; b ∈ {4, 8, 10, 16}; k = 1…16'],['Capacity','m = 200,000; k = 7; n = 5,000…60,000'],['Exact lookup','n ∈ {20,000, 200,000}; b = 10; k ∈ {1, 3, 7, 11}'],['Query mix','Absent fractions 0%, 50%, 90%, 100%']]),
+ P('At 10 bits per key, k* is about 6.93. A follow-up asks whether the lowest-error choice also gives the fastest exact lookup.'),
+ T(['Experiment','Controlled design'],[['Hash sweep','n = 20,000; b ∈ {4, 8, 10, 16}; k = 1…16'],['Capacity','m = 200,000; k = 7; n = 5,000…60,000'],['Exact lookup','n ∈ {20,000, 200,000}; b = 10; k ∈ {1, 3, 7, 11}']]),
 ])
 page('2.2 Reproducible measurement',[
  P('Each accuracy setting uses eight seeds and 200,000 absent queries. Applying the one-to-one mix64 mapping to separate counter ranges keeps inserted and absent keys distinct. Seeds change the ranges and salts; comparisons within a seed reuse keys. The 560 rows record 112 million query evaluations.'),
@@ -69,33 +69,28 @@ page('2.3 Accuracy and hash count',[
 page('2.4 Capacity and storage',[
  T(['Inserted / design capacity','Measured false-positive rate'],[[f'{load:g}×',pct(pick('capacity',load=load)['mean'])] for load in [.5,1.,1.5,2.,3.]]),
  P('With m = 200,000 and k = 7, the filter was designed for 20,000 keys. At twice that capacity, false positives rise from 0.821% to 13.841%; at three times capacity, they reach 40.182%. Inserted keys still pass, but the fuller array rejects fewer absent keys.'),
- P('At one quarter of capacity, only three false positives occurred in 1.6 million absent queries. There are too few errors to estimate this small probability precisely.'),
+ P('Together, the hash-count and capacity curves broadly follow theory. At one quarter of capacity, however, only three false positives occurred in 1.6 million absent queries, too few to estimate this small probability precisely.'),
  T(['Structure at n = 200,000','Requested storage'],[['Bloom bit array','250,000 bytes'],['Exact set nodes and buckets','6,400,024 bytes'],['Bloom plus exact set','6,650,024 bytes']]),
  P('The exact set uses about 25.6 times the storage of the filter, but gives exact answers. Adding the filter to the set costs another 250,000 bytes, or 3.9%. Measurements count requested set-node and bucket bytes and the filter’s word array. They exclude object headers, allocator metadata and input vectors, rather than measuring total process memory.'),
 ])
-page('2.5 Exact lookup performance',[
+page('2.5 Does lower error mean faster lookup?',[
  F('speedup.png','Figure 2. Set-only query time divided by filter-plus-set query time. A value above 1 means the filter speeds up exact lookup. Error bars show 95% intervals across four paired seed ratios.'),
  T(['n = 200,000','k = 1 speedup','k = 7 speedup'],[[f'{int(m*100)}% absent',ci(pick('speedup',n=200000,k=1,negative_fraction=m)),ci(pick('speedup',n=200000,k=7,negative_fraction=m))] for m in [0.,.5,.9,1.]]),
- P('Seven hashes gave a low error rate but did not consistently make exact lookup faster. With 20,000 keys and all queries absent, its speedup was 0.713 ± 0.021, meaning it was slower than the set alone. One hash gave 2.871 ± 0.357. Although it allowed more false positives, it took less time to check and still rejected most absent keys.'),
+ P('The follow-up compares the low-error choice with faster-to-check settings. Seven hashes did not consistently make exact lookup faster. With 20,000 keys and all queries absent, its speedup was 0.713 ± 0.021, meaning it was slower than the set alone. One hash gave 2.871 ± 0.357. Although it allowed more false positives, it took less time to check and still rejected most absent keys.'),
  P('With 200,000 keys and all queries absent, the interval for k = 7 includes 1, so this run does not clearly show a speed advantage. When all queried keys were present, adding the filter always made lookup slower because every query still reached the set. The benefit depends on the proportion of absent queries and the cost of checking the set.'),
 ])
 page('2.6 A follow-up on early exit',[
  F('early_exit.png','Figure 3. Early exit compared with full scanning at k = 7. Both give the same result for every checked query. Bars show the mean of the seed medians, with 95% intervals.'),
- P('In the main experiment, Bloom queries for absent keys took longer than queries for present keys, even though they could stop early. A separate experiment compared early exit with a version that checks all k positions, called a full scan. The full scan used a separate word array with the same contents and positions. Each setting used four seeds and seven timed repetitions. Bit checks were counted outside timing.'),
+ P('The timing study raised an unexpected question: why did absent queries take longer even though they could stop early? A diagnostic compared early exit with full scanning using a separate array with identical bits and positions. It used four seeds and seven repetitions; bit checks were counted outside timing.'),
  P('With n = 200,000, early exit checked about 1.996 positions per absent query and took 41.69 ± 1.96 ns. Full scanning checked all seven positions but took only 23.58 ± 0.50 ns. The smaller dataset showed the same pattern. In these tests, checking fewer bits did not make the query faster.'),
- P('Branches and compiler-generated code may explain the difference, but no branch counters or assembly analysis were collected. The two arrays also had different memory addresses. The next experiment removes that storage difference and compares both versions as part of exact lookup. Its timings are reported separately from this run.'),
+ P('This suggested that fewer bit checks did not guarantee lower runtime. Branches and compiler output are possible explanations, but no hardware counters or assembly analysis were collected. Because the arrays had different addresses, the next comparison uses the same Bloom object and measures the complete lookup process. The two runs remain separate.'),
 ])
 page('2.7 Full scanning in the exact pipeline',[
  F('pipeline_exit.png','Figure 4. The September 22 comparison of both exact pipelines. Values above 1 mean faster lookup than the set alone. Error bars show 95% intervals across four seed ratios.'),
- P('The next experiment uses contains and contains_full_scan on the same Bloom object, followed by the same exact set. Both versions read the same bits and send the same queries to the set. Full scanning uses &= to combine all bit checks without an early return. Before timing, both versions are checked against the exact set for every query.'),
- P('The experiment uses two set sizes, k = 1 or 7, four absent-query proportions and four seeds. Each method has seven repetitions of 200,000 queries, giving 1,344 timing rows. Data generation and validation stay outside timing. Methods are warmed up and run in random order. Analysis uses the same seed-median and paired-ratio method as before. With k = 1, both query versions check just one bit, providing a useful control.'),
+ P('The final timing check uses contains and contains_full_scan on the same Bloom object and exact set. Both answers are verified per key. It tests two set sizes, k = 1 or 7, four query mixes and four seeds, with seven repetitions of 200,000 queries. The timing and analysis procedure follows Section 2.2, giving 1,344 rows.'),
  T(['n = 200,000; k = 7','Set / early time','Set / full time'],[[f'{int(q*100)}% absent',ci(up(200000,7,q)['early_speedup']),ci(up(200000,7,q)['full_speedup'])] for q in [.5,.9,1.]]),
-])
-page('2.7.1 Results and scope',[
- P('With 200,000 keys, k = 7 and all queries absent, full scanning makes the exact pipeline {ratio} times as fast as early exit. Compared with the set alone, the speedup is {full} for full scanning and {early} for early exit. Full scanning therefore improves the whole lookup process in this setting, not only the filter by itself.'.format(ratio=ci(up(200000,7,1.)['full_over_early']), full=ci(up(200000,7,1.)['full_speedup']), early=ci(up(200000,7,1.)['early_speedup']))),
- P('The result changes with the queries. When half are absent, the full-scan/early-exit speed ratio is {ratio}, so full scanning is slower. With 90% absent queries, its speedup over the set alone is {speedup}. That interval includes 1, so there is no clear advantage over the set in this case.'.format(ratio=ci(up(200000,7,.5)['full_over_early']), speedup=ci(up(200000,7,.9)['full_speedup']))),
- P('For the smaller set, full scanning with k = 7 also helps when all queries are absent: its speedup over the set alone is {small}. However, one hash with early exit remains faster in the 200,000-key, all-absent test, with a speedup of {one}. Improving the seven-hash version does not make it the fastest tested setting.'.format(small=ci(up(20000,7,1.)['full_speedup']), one=ci(up(200000,1,1.)['early_speedup']))),
- P('Using one Bloom object removes the different array addresses from the earlier comparison. With k = 1, the timing differences between versions are much smaller than with k = 7 when most queries are absent. However, the experiment does not separate the effects of branches, vectorisation or instruction scheduling. It uses four seeds, a fixed order of configurations and an active desktop machine.'),
+ P('With all queries absent, full scanning is {ratio} times as fast as early exit. It also beats the set alone at both sizes. At 50% absent, however, its speed relative to early exit is {mixed}, so it is slower. At 90% absent, its interval relative to the set includes 1.'.format(ratio=ci(up(200000,7,1.)['full_over_early']),mixed=ci(up(200000,7,.5)['full_over_early']))),
+ P('One hash still gives the fastest tested all-absent lookup: its speedup at 200,000 keys is {one}. Thus, improving the seven-hash code does not change the answer to the follow-up question: lowest error does not imply fastest lookup. The one-hash control shows much smaller differences between query versions, but these measurements do not identify a hardware cause. Configuration order was fixed on an active desktop.'.format(one=ci(up(200000,1,1.)['early_speedup']))),
 ])
 page('2.8 Interpretation and limits',[
  P('Let q be the fraction of queries for absent keys and p the false-positive rate. The fraction r that reaches the exact set is approximately:'),
@@ -109,7 +104,7 @@ page('2.8 Interpretation and limits',[
  P('Construction is excluded from query speedups. Each set-build time is one observation repeated across the relevant k rows in the memory CSV. The comparison concerns repeated lookups after construction.'),
 ])
 page('2.9 Choosing a configuration',[
- P('Choose the setting based on the answer guarantee and the work it needs to save. If false positives are acceptable, select m and k for the error target. If answers must be exact, keep the set and measure the combined query time. In that case, the filter uses extra memory to avoid some set lookups.'),
+ P('The main study supports using the theoretical curve to choose a starting configuration for accuracy. The timing follow-up shows why that choice also needs measurement when speed matters. If false positives are acceptable, select m and k for the error target. If answers must be exact, keep the set and measure the combined query time. In that case, the filter uses extra memory to avoid some set lookups.'),
  T(['Goal or workload','Recommendation within tested scope'],[
  ['About 1% false positives at 10 bits/key','Use about 7 hashes at design capacity. Check how full the array becomes as more keys are inserted.'],
  ['Faster exact lookup with 90–100% absent queries','Test fewer hashes first. In the follow-up, k = 1 was faster than k = 7.'],

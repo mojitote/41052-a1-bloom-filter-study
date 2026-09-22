@@ -30,11 +30,11 @@ The tests pass 464,427 checks in both the optimised build and the AddressSanitiz
 
 ## 2 Empirical study
 
-### 2.1 Questions and initial hypotheses
+### 2.1 Main question and theoretical prediction
 
-Here, n counts distinct inserted keys, m is the array size in bits, and k is the number of hash positions per key. The hypotheses are:
+The main question is how closely measured false-positive rates follow theory as the hash count and inserted-key count change. Here, n counts distinct inserted keys, m is the array size in bits, and k is the number of hash positions per key.
 
-H1: At a fixed bit budget per key, increasing k should first lower and then raise the false-positive rate. H2: Exceeding design capacity should increase false positives without rejecting inserted keys. H3: Filtering should reduce total query time when skipped exact-set lookups save more time than filtering costs.
+The hypothesis is that measured rates follow the predicted curve: increasing k first lowers and then raises the rate, while adding keys to a fixed filter raises it. Checking that inserted keys are never rejected tests implementation correctness.
 
 With independent, uniform hashes, a particular bit stays zero with probability:
 
@@ -54,14 +54,13 @@ $$
 b = \frac{m}{n} ,     {k}^{*} \approx  b ln 2
 $$
 
-At 10 bits per key, k* is about 6.93. Seven hashes therefore targets low error; the formula does not optimise query time.
+At 10 bits per key, k* is about 6.93. A follow-up asks whether the lowest-error choice also gives the fastest exact lookup.
 
 | Experiment | Controlled design |
 | --- | --- |
 | Hash sweep | n = 20,000; b ∈ {4, 8, 10, 16}; k = 1…16 |
 | Capacity | m = 200,000; k = 7; n = 5,000…60,000 |
 | Exact lookup | n ∈ {20,000, 200,000}; b = 10; k ∈ {1, 3, 7, 11} |
-| Query mix | Absent fractions 0%, 50%, 90%, 100% |
 
 ## 2.2 Reproducible measurement
 
@@ -100,7 +99,7 @@ At 16 bits per key, k = 12 has the lowest measured mean, while the rounded theor
 
 With m = 200,000 and k = 7, the filter was designed for 20,000 keys. At twice that capacity, false positives rise from 0.821% to 13.841%; at three times capacity, they reach 40.182%. Inserted keys still pass, but the fuller array rejects fewer absent keys.
 
-At one quarter of capacity, only three false positives occurred in 1.6 million absent queries. There are too few errors to estimate this small probability precisely.
+Together, the hash-count and capacity curves broadly follow theory. At one quarter of capacity, however, only three false positives occurred in 1.6 million absent queries, too few to estimate this small probability precisely.
 
 | Structure at n = 200,000 | Requested storage |
 | --- | --- |
@@ -110,7 +109,7 @@ At one quarter of capacity, only three false positives occurred in 1.6 million a
 
 The exact set uses about 25.6 times the storage of the filter, but gives exact answers. Adding the filter to the set costs another 250,000 bytes, or 3.9%. Measurements count requested set-node and bucket bytes and the filter’s word array. They exclude object headers, allocator metadata and input vectors, rather than measuring total process memory.
 
-## 2.5 Exact lookup performance
+## 2.5 Does lower error mean faster lookup?
 
 ![Figure 2. Set-only query time divided by filter-plus-set query time. A value above 1 means the filter speeds up exact lookup. Error bars show 95% intervals across four paired seed ratios.](../figures/speedup.png)
 
@@ -121,7 +120,7 @@ The exact set uses about 25.6 times the storage of the filter, but gives exact a
 | 90% absent | 1.557 ± 0.069 | 0.680 ± 0.009 |
 | 100% absent | 2.709 ± 0.062 | 0.905 ± 0.440 |
 
-Seven hashes gave a low error rate but did not consistently make exact lookup faster. With 20,000 keys and all queries absent, its speedup was 0.713 ± 0.021, meaning it was slower than the set alone. One hash gave 2.871 ± 0.357. Although it allowed more false positives, it took less time to check and still rejected most absent keys.
+The follow-up compares the low-error choice with faster-to-check settings. Seven hashes did not consistently make exact lookup faster. With 20,000 keys and all queries absent, its speedup was 0.713 ± 0.021, meaning it was slower than the set alone. One hash gave 2.871 ± 0.357. Although it allowed more false positives, it took less time to check and still rejected most absent keys.
 
 With 200,000 keys and all queries absent, the interval for k = 7 includes 1, so this run does not clearly show a speed advantage. When all queried keys were present, adding the filter always made lookup slower because every query still reached the set. The benefit depends on the proportion of absent queries and the cost of checking the set.
 
@@ -129,19 +128,17 @@ With 200,000 keys and all queries absent, the interval for k = 7 includes 1, so 
 
 ![Figure 3. Early exit compared with full scanning at k = 7. Both give the same result for every checked query. Bars show the mean of the seed medians, with 95% intervals.](../figures/early_exit.png)
 
-In the main experiment, Bloom queries for absent keys took longer than queries for present keys, even though they could stop early. A separate experiment compared early exit with a version that checks all k positions, called a full scan. The full scan used a separate word array with the same contents and positions. Each setting used four seeds and seven timed repetitions. Bit checks were counted outside timing.
+The timing study raised an unexpected question: why did absent queries take longer even though they could stop early? A diagnostic compared early exit with full scanning using a separate array with identical bits and positions. It used four seeds and seven repetitions; bit checks were counted outside timing.
 
 With n = 200,000, early exit checked about 1.996 positions per absent query and took 41.69 ± 1.96 ns. Full scanning checked all seven positions but took only 23.58 ± 0.50 ns. The smaller dataset showed the same pattern. In these tests, checking fewer bits did not make the query faster.
 
-Branches and compiler-generated code may explain the difference, but no branch counters or assembly analysis were collected. The two arrays also had different memory addresses. The next experiment removes that storage difference and compares both versions as part of exact lookup. Its timings are reported separately from this run.
+This suggested that fewer bit checks did not guarantee lower runtime. Branches and compiler output are possible explanations, but no hardware counters or assembly analysis were collected. Because the arrays had different addresses, the next comparison uses the same Bloom object and measures the complete lookup process. The two runs remain separate.
 
 ## 2.7 Full scanning in the exact pipeline
 
 ![Figure 4. The September 22 comparison of both exact pipelines. Values above 1 mean faster lookup than the set alone. Error bars show 95% intervals across four seed ratios.](../figures/pipeline_exit.png)
 
-The next experiment uses contains and contains_full_scan on the same Bloom object, followed by the same exact set. Both versions read the same bits and send the same queries to the set. Full scanning uses &= to combine all bit checks without an early return. Before timing, both versions are checked against the exact set for every query.
-
-The experiment uses two set sizes, k = 1 or 7, four absent-query proportions and four seeds. Each method has seven repetitions of 200,000 queries, giving 1,344 timing rows. Data generation and validation stay outside timing. Methods are warmed up and run in random order. Analysis uses the same seed-median and paired-ratio method as before. With k = 1, both query versions check just one bit, providing a useful control.
+The final timing check uses contains and contains_full_scan on the same Bloom object and exact set. Both answers are verified per key. It tests two set sizes, k = 1 or 7, four query mixes and four seeds, with seven repetitions of 200,000 queries. The timing and analysis procedure follows Section 2.2, giving 1,344 rows.
 
 | n = 200,000; k = 7 | Set / early time | Set / full time |
 | --- | --- | --- |
@@ -149,15 +146,9 @@ The experiment uses two set sizes, k = 1 or 7, four absent-query proportions and
 | 90% absent | 0.676 ± 0.016 | 1.011 ± 0.028 |
 | 100% absent | 0.707 ± 0.041 | 1.282 ± 0.098 |
 
-## 2.7.1 Results and scope
+With all queries absent, full scanning is 1.812 ± 0.034 times as fast as early exit. It also beats the set alone at both sizes. At 50% absent, however, its speed relative to early exit is 0.859 ± 0.006, so it is slower. At 90% absent, its interval relative to the set includes 1.
 
-With 200,000 keys, k = 7 and all queries absent, full scanning makes the exact pipeline 1.812 ± 0.034 times as fast as early exit. Compared with the set alone, the speedup is 1.282 ± 0.098 for full scanning and 0.707 ± 0.041 for early exit. Full scanning therefore improves the whole lookup process in this setting, not only the filter by itself.
-
-The result changes with the queries. When half are absent, the full-scan/early-exit speed ratio is 0.859 ± 0.006, so full scanning is slower. With 90% absent queries, its speedup over the set alone is 1.011 ± 0.028. That interval includes 1, so there is no clear advantage over the set in this case.
-
-For the smaller set, full scanning with k = 7 also helps when all queries are absent: its speedup over the set alone is 1.217 ± 0.009. However, one hash with early exit remains faster in the 200,000-key, all-absent test, with a speedup of 2.726 ± 0.055. Improving the seven-hash version does not make it the fastest tested setting.
-
-Using one Bloom object removes the different array addresses from the earlier comparison. With k = 1, the timing differences between versions are much smaller than with k = 7 when most queries are absent. However, the experiment does not separate the effects of branches, vectorisation or instruction scheduling. It uses four seeds, a fixed order of configurations and an active desktop machine.
+One hash still gives the fastest tested all-absent lookup: its speedup at 200,000 keys is 2.726 ± 0.055. Thus, improving the seven-hash code does not change the answer to the follow-up question: lowest error does not imply fastest lookup. The one-hash control shows much smaller differences between query versions, but these measurements do not identify a hardware cause. Configuration order was fixed on an active desktop.
 
 ## 2.8 Interpretation and limits
 
@@ -187,7 +178,7 @@ Construction is excluded from query speedups. Each set-build time is one observa
 
 ## 2.9 Choosing a configuration
 
-Choose the setting based on the answer guarantee and the work it needs to save. If false positives are acceptable, select m and k for the error target. If answers must be exact, keep the set and measure the combined query time. In that case, the filter uses extra memory to avoid some set lookups.
+The main study supports using the theoretical curve to choose a starting configuration for accuracy. The timing follow-up shows why that choice also needs measurement when speed matters. If false positives are acceptable, select m and k for the error target. If answers must be exact, keep the set and measure the combined query time. In that case, the filter uses extra memory to avoid some set lookups.
 
 | Goal or workload | Recommendation within tested scope |
 | --- | --- |
