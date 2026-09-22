@@ -61,32 +61,34 @@ page('2.2 Reproducible measurement',[
 ])
 a7=pick('accuracy',bits_per_key=10,k=7)
 page('2.3 Accuracy and hash count',[
- F('accuracy.png','Figure 1. Left: mean false-positive rates across eight seeds, with 95% intervals and theoretical curves. Right: the effect of inserting more keys into a fixed-size filter. Some error bars are too small to see.'),
+ F('accuracy_hash.png','Figure 1. Mean false-positive rates across eight seeds, with 95% intervals and theoretical curves. Some error bars are too small to see.'),
  T(['Bits per key','Measured best k','False-positive rate'],[[str(b),str(int(min([x for x in S['accuracy'] if x['bits_per_key']==b],key=lambda x:x['mean'])['k'])),pct(min([x for x in S['accuracy'] if x['bits_per_key']==b],key=lambda x:x['mean'])['mean'])] for b in [4,8,10,16]]),
  P('At 10 bits per key, k = 7 gives a false-positive rate of {value} percentage points, close to the predicted 0.819%. Raising k to 16 increases the measured rate to 2.714%. More hashes make a query check more positions, but they also set more bits during insertion. When the array becomes too full, the extra checks no longer reduce false positives.'.format(value=ci(a7,100))),
  P('At 16 bits per key, k = 12 has the lowest measured mean, while the rounded theoretical choice is 11. The confidence intervals for nearby choices overlap, so the result does not clearly show that 12 is better. Random variation can change which setting has the smallest measured value.'),
 ])
 page('2.4 Capacity and storage',[
+ F('accuracy_capacity.png','Figure 2. False-positive rate as more keys are inserted into a fixed-size filter with k = 7. Some error bars are too small to see.'),
  T(['Inserted / design capacity','Measured false-positive rate'],[[f'{load:g}×',pct(pick('capacity',load=load)['mean'])] for load in [.5,1.,1.5,2.,3.]]),
  P('With m = 200,000 and k = 7, the filter was designed for 20,000 keys. At twice that capacity, false positives rise from 0.821% to 13.841%; at three times capacity, they reach 40.182%. Inserted keys still pass, but the fuller array rejects fewer absent keys.'),
  P('Together, the hash-count and capacity curves broadly follow theory. At one quarter of capacity, however, only three false positives occurred in 1.6 million absent queries, too few to estimate this small probability precisely.'),
+ H('Storage comparison'),
  T(['Structure at n = 200,000','Requested storage'],[['Bloom bit array','250,000 bytes'],['Exact set nodes and buckets','6,400,024 bytes'],['Bloom plus exact set','6,650,024 bytes']]),
  P('The exact set uses about 25.6 times the storage of the filter, but gives exact answers. Adding the filter to the set costs another 250,000 bytes, or 3.9%. Measurements count requested set-node and bucket bytes and the filter’s word array. They exclude object headers, allocator metadata and input vectors, rather than measuring total process memory.'),
 ])
 page('2.5 Does lower error mean faster lookup?',[
- F('speedup.png','Figure 2. Set-only query time divided by filter-plus-set query time. A value above 1 means the filter speeds up exact lookup. Error bars show 95% intervals across four paired seed ratios.'),
+ F('speedup.png','Figure 3. Set-only query time divided by filter-plus-set query time. A value above 1 means the filter speeds up exact lookup. Error bars show 95% intervals across four paired seed ratios.'),
  T(['n = 200,000','k = 1 speedup','k = 7 speedup'],[[f'{int(m*100)}% absent',ci(pick('speedup',n=200000,k=1,negative_fraction=m)),ci(pick('speedup',n=200000,k=7,negative_fraction=m))] for m in [0.,.5,.9,1.]]),
  P('The follow-up compares the low-error choice with faster-to-check settings. Seven hashes did not consistently make exact lookup faster. With 20,000 keys and all queries absent, its speedup was 0.713 ± 0.021, meaning it was slower than the set alone. One hash gave 2.871 ± 0.357. Although it allowed more false positives, it took less time to check and still rejected most absent keys.'),
  P('With 200,000 keys and all queries absent, the interval for k = 7 includes 1, so this run does not clearly show a speed advantage. When all queried keys were present, adding the filter always made lookup slower because every query still reached the set. The benefit depends on the proportion of absent queries and the cost of checking the set.'),
 ])
 page('2.6 A follow-up on early exit',[
- F('early_exit.png','Figure 3. Early exit compared with full scanning at k = 7. Both give the same result for every checked query. Bars show the mean of the seed medians, with 95% intervals.'),
+ F('early_exit.png','Figure 4. Early exit compared with full scanning at k = 7. Both give the same result for every checked query. Bars show the mean of the seed medians, with 95% intervals.'),
  P('The timing study raised an unexpected question: why did absent queries take longer even though they could stop early? A diagnostic compared early exit with full scanning using a separate array with identical bits and positions. It used four seeds and seven repetitions; bit checks were counted outside timing.'),
  P('With n = 200,000, early exit checked about 1.996 positions per absent query and took 41.69 ± 1.96 ns. Full scanning checked all seven positions but took only 23.58 ± 0.50 ns. The smaller dataset showed the same pattern. In these tests, checking fewer bits did not make the query faster.'),
  P('This suggested that fewer bit checks did not guarantee lower runtime. Branches and compiler output are possible explanations, but no hardware counters or assembly analysis were collected. Because the arrays had different addresses, the next comparison uses the same Bloom object and measures the complete lookup process. The two runs remain separate.'),
 ])
 page('2.7 Full scanning in the exact pipeline',[
- F('pipeline_exit.png','Figure 4. The September 22 comparison of both exact pipelines. Values above 1 mean faster lookup than the set alone. Error bars show 95% intervals across four seed ratios.'),
+ F('pipeline_exit.png','Figure 5. The September 22 comparison of both exact pipelines. Values above 1 mean faster lookup than the set alone. Error bars show 95% intervals across four seed ratios.'),
  P('The final timing check uses contains and contains_full_scan on the same Bloom object and exact set. Both answers are verified per key. It tests two set sizes, k = 1 or 7, four query mixes and four seeds, with seven repetitions of 200,000 queries. The timing and analysis procedure follows Section 2.2, giving 1,344 rows.'),
  T(['n = 200,000; k = 7','Set / early time','Set / full time'],[[f'{int(q*100)}% absent',ci(up(200000,7,q)['early_speedup']),ci(up(200000,7,q)['full_speedup'])] for q in [.5,.9,1.]]),
  P('With all queries absent, full scanning is {ratio} times as fast as early exit. It also beats the set alone at both sizes. At 50% absent, however, its speed relative to early exit is {mixed}, so it is slower. At 90% absent, its interval relative to the set includes 1.'.format(ratio=ci(up(200000,7,1.)['full_over_early']),mixed=ci(up(200000,7,.5)['full_over_early']))),
@@ -183,7 +185,7 @@ def table(headers,rows):
             pp=para('',compact=True);pp.remove(pp[-1]);pp.append(text_run(str(value),bold=i==0,size=10,color='FFFFFF' if i==0 else '000000'));tc.append(pp)
     return tbl
 def figure(path,rid,idx):
-    w,h=Image.open(path).size;cx=5350000;cy=int(cx*h/w)
+    w,h=Image.open(path).size;cx=(4200000 if path.name=='accuracy_hash.png' else 3500000 if path.name=='accuracy_capacity.png' else 5350000);cy=int(cx*h/w)
     xml=f'''<w:p xmlns:w="{W}" xmlns:r="{R}" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:pPr><w:keepNext/><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="{cx}" cy="{cy}"/><wp:docPr id="{100+idx}" name="Study figure {idx}"/><wp:cNvGraphicFramePr/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="0" name="{path.name}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="{rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="{cx}" cy="{cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>'''
     return E.fromstring(xml.encode())
 

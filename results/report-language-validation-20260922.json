@@ -1,12 +1,12 @@
 {
   "date": "2026-09-22",
-  "scope": "Report language revision only",
-  "rendered_pages": 18,
+  "scope": "Report figure placement and final render QA",
+  "rendered_pages": 19,
   "all_pages_visually_reviewed": true,
   "headings_references_and_numeric_tables_unchanged": false,
   "algorithm_and_raw_measurements_unchanged": true,
   "word_files_identical": true,
-  "render_directory": "docs/qa/focused-final",
+  "render_directory": "docs/qa/figure-split-final3",
   "algorithm_tests_rerun": false,
   "what_i_built_revision": "Added representation rationale, textbook comparison and full-scan extension; removed opening experiment summary.",
   "changed_rendered_pages": [
@@ -20,7 +20,11 @@
   "other_pages_pixel_identical_to_previous_review": true,
   "native_word_equations": 6,
   "numeric_table_values_and_references_unchanged": true,
-  "revision": "Defined symbols before formulas; renamed section 1.1; added editable Office Math and Markdown LaTeX.",
+  "revision": "Split the composite accuracy figure so the hash-count plot appears in Section 2.3 and the capacity plot appears in Section 2.4; added a Storage comparison continuation heading.",
   "main_question_refocused": true,
-  "table_orphan_fixed": true
+  "table_orphan_fixed": true,
+  "figure_split_by_section": true,
+  "figure_2_3": "figures/accuracy_hash.png",
+  "figure_2_4": "figures/accuracy_capacity.png",
+  "storage_continuation_heading": true
 }

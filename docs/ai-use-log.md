@@ -50,3 +50,7 @@ Codex also rewrote the report in clear student English at the user's request, pr
 Codex clarified mathematical notation and added six editable Word equation blocks, then checked their rendering and preserved experimental table values.
 
 Codex refocused the empirical study around measured false-positive rates versus theory, with exact lookup speed as the follow-up question; redundant hypothesis framing was removed and the 18-page render was checked.
+
+## September 22 figure placement revision
+
+Codex split the composite accuracy plot so each subplot appears beside the section that analyses it: hash count in Section 2.3 and capacity in Section 2.4. The final 19-page DOCX render was visually checked page by page.

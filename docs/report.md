@@ -74,7 +74,7 @@ For each seed, the analysis takes the median of seven timings, then reports the 
 
 ## 2.3 Accuracy and hash count
 
-![Figure 1. Left: mean false-positive rates across eight seeds, with 95% intervals and theoretical curves. Right: the effect of inserting more keys into a fixed-size filter. Some error bars are too small to see.](../figures/accuracy.png)
+![Figure 1. Mean false-positive rates across eight seeds, with 95% intervals and theoretical curves. Some error bars are too small to see.](../figures/accuracy_hash.png)
 
 | Bits per key | Measured best k | False-positive rate |
 | --- | --- | --- |
@@ -89,6 +89,8 @@ At 16 bits per key, k = 12 has the lowest measured mean, while the rounded theor
 
 ## 2.4 Capacity and storage
 
+![Figure 2. False-positive rate as more keys are inserted into a fixed-size filter with k = 7. Some error bars are too small to see.](../figures/accuracy_capacity.png)
+
 | Inserted / design capacity | Measured false-positive rate |
 | --- | --- |
 | 0.5× | 0.019% |
@@ -101,6 +103,8 @@ With m = 200,000 and k = 7, the filter was designed for 20,000 keys. At twice th
 
 Together, the hash-count and capacity curves broadly follow theory. At one quarter of capacity, however, only three false positives occurred in 1.6 million absent queries, too few to estimate this small probability precisely.
 
+### Storage comparison
+
 | Structure at n = 200,000 | Requested storage |
 | --- | --- |
 | Bloom bit array | 250,000 bytes |
@@ -111,7 +115,7 @@ The exact set uses about 25.6 times the storage of the filter, but gives exact a
 
 ## 2.5 Does lower error mean faster lookup?
 
-![Figure 2. Set-only query time divided by filter-plus-set query time. A value above 1 means the filter speeds up exact lookup. Error bars show 95% intervals across four paired seed ratios.](../figures/speedup.png)
+![Figure 3. Set-only query time divided by filter-plus-set query time. A value above 1 means the filter speeds up exact lookup. Error bars show 95% intervals across four paired seed ratios.](../figures/speedup.png)
 
 | n = 200,000 | k = 1 speedup | k = 7 speedup |
 | --- | --- | --- |
@@ -126,7 +130,7 @@ With 200,000 keys and all queries absent, the interval for k = 7 includes 1, so 
 
 ## 2.6 A follow-up on early exit
 
-![Figure 3. Early exit compared with full scanning at k = 7. Both give the same result for every checked query. Bars show the mean of the seed medians, with 95% intervals.](../figures/early_exit.png)
+![Figure 4. Early exit compared with full scanning at k = 7. Both give the same result for every checked query. Bars show the mean of the seed medians, with 95% intervals.](../figures/early_exit.png)
 
 The timing study raised an unexpected question: why did absent queries take longer even though they could stop early? A diagnostic compared early exit with full scanning using a separate array with identical bits and positions. It used four seeds and seven repetitions; bit checks were counted outside timing.
 
@@ -136,7 +140,7 @@ This suggested that fewer bit checks did not guarantee lower runtime. Branches a
 
 ## 2.7 Full scanning in the exact pipeline
 
-![Figure 4. The September 22 comparison of both exact pipelines. Values above 1 mean faster lookup than the set alone. Error bars show 95% intervals across four seed ratios.](../figures/pipeline_exit.png)
+![Figure 5. The September 22 comparison of both exact pipelines. Values above 1 mean faster lookup than the set alone. Error bars show 95% intervals across four seed ratios.](../figures/pipeline_exit.png)
 
 The final timing check uses contains and contains_full_scan on the same Bloom object and exact set. Both answers are verified per key. It tests two set sizes, k = 1 or 7, four query mixes and four seeds, with seven repetitions of 200,000 queries. The timing and analysis procedure follows Section 2.2, giving 1,344 rows.
 
