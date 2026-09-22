@@ -74,7 +74,7 @@ For each seed, the analysis takes the median of seven timings, then reports the 
 
 ## 2.3 Accuracy and hash count
 
-![Figure 1. Mean false-positive rates across eight seeds, with 95% intervals and theoretical curves. Some error bars are too small to see.](../figures/accuracy_hash.png)
+![Figure 1. Mean false-positive rates across eight seeds, with 95% intervals and theoretical curves. Some error bars are too small to see.](figures/accuracy_hash.png)
 
 | Bits per key | Measured best k | False-positive rate |
 | --- | --- | --- |
@@ -89,7 +89,7 @@ At 16 bits per key, k = 12 has the lowest measured mean, while the rounded theor
 
 ## 2.4 Capacity and storage
 
-![Figure 2. False-positive rate as more keys are inserted into a fixed-size filter with k = 7. Some error bars are too small to see.](../figures/accuracy_capacity.png)
+![Figure 2. False-positive rate as more keys are inserted into a fixed-size filter with k = 7. Some error bars are too small to see.](figures/accuracy_capacity.png)
 
 | Inserted / design capacity | Measured false-positive rate |
 | --- | --- |
@@ -115,7 +115,7 @@ The exact set uses about 25.6 times the storage of the filter, but gives exact a
 
 ## 2.5 Does lower error mean faster lookup?
 
-![Figure 3. Set-only query time divided by filter-plus-set query time. A value above 1 means the filter speeds up exact lookup. Error bars show 95% intervals across four paired seed ratios.](../figures/speedup.png)
+![Figure 3. Set-only query time divided by filter-plus-set query time. A value above 1 means the filter speeds up exact lookup. Error bars show 95% intervals across four paired seed ratios.](figures/speedup.png)
 
 | n = 200,000 | k = 1 speedup | k = 7 speedup |
 | --- | --- | --- |
@@ -130,7 +130,7 @@ With 200,000 keys and all queries absent, the interval for k = 7 includes 1, so 
 
 ## 2.6 A follow-up on early exit
 
-![Figure 4. Early exit compared with full scanning at k = 7. Both give the same result for every checked query. Bars show the mean of the seed medians, with 95% intervals.](../figures/early_exit.png)
+![Figure 4. Early exit compared with full scanning at k = 7. Both give the same result for every checked query. Bars show the mean of the seed medians, with 95% intervals.](figures/early_exit.png)
 
 The timing study raised an unexpected question: why did absent queries take longer even though they could stop early? A diagnostic compared early exit with full scanning using a separate array with identical bits and positions. It used four seeds and seven repetitions; bit checks were counted outside timing.
 
@@ -140,7 +140,7 @@ This suggested that fewer bit checks did not guarantee lower runtime. Branches a
 
 ## 2.7 Full scanning in the exact pipeline
 
-![Figure 5. The September 22 comparison of both exact pipelines. Values above 1 mean faster lookup than the set alone. Error bars show 95% intervals across four seed ratios.](../figures/pipeline_exit.png)
+![Figure 5. The September 22 comparison of both exact pipelines. Values above 1 mean faster lookup than the set alone. Error bars show 95% intervals across four seed ratios.](figures/pipeline_exit.png)
 
 This section compares two complete exact-query pipelines. In both pipelines, the Bloom filter first rejects keys that are definitely absent, and the exact set checks every possible match so the final answer remains exact. The difference is only in the Bloom query: contains stops at the first zero bit, while contains_full_scan checks all k positions before returning.
 
@@ -214,13 +214,17 @@ Finally, many passing checks are not enough if the test repeats the same mistake
 
 ## 4 AI use
 
-I used OpenAI Codex for most of the code and report, including implementation, debugging, tests, experiment design, running measurements, analysis and drafting. It also adapted the Word template and uploaded the repository. The September 22 revision used Codex to add full scanning, compare the two exact pipelines and update the recommendations.
+**Tools used.** I used OpenAI Codex heavily throughout the project, mainly for the implementation, experiments and report preparation. I also used C++17, Python and Microsoft Word to build, test, analyse and present the project.
 
-One problem was that the first generated reference test reused BloomFilter::position. If that function was wrong, the test could repeat the same error. AI-assisted review added fixed expected mixer outputs and positions, plus checks that the exact pipeline and set agreed on each key. Commit 93063ae contains the initial version, and the test diff records the changes.
+**What I used them for.** Codex helped scaffold the Bloom-filter implementation, debug the code, write tests, generate experiment scripts and plots, explain concepts I did not understand, draft parts of the report and format the Word document. I checked the generated work by running the tests, sanitizers and experiments.
 
-Another problem was that the generated analysis script assumed SciPy and Matplotlib were installed. It failed with ModuleNotFoundError for scipy and then matplotlib. The fix replaced the SciPy dependency with explicit t critical values for the supported seed counts and installed the plotting dependencies locally. The commands and successful output were recorded; the raw measurements stayed unchanged.
+**Where the AI was wrong or unhelpful.** One generated reference test reused `BloomFilter::position()` to calculate its expected positions. This meant the test could repeat the same error as the implementation. I replaced part of the test with fixed expected mixer outputs and positions, and added checks against the exact set for every tested key.
 
-Codex ran the builds, tests, sanitizers, CSV checks and plot generation. I worked through the bit indexing, insertion invariant and query logic during code review. I relied on the published mixer constants rather than deriving them. Hash independence and the hardware cause of the timing results remain unproven. The |= to = example was deliberately written to show a failure, rather than being an accidental AI bug.
+A generated analysis script also assumed that SciPy and Matplotlib were already installed. It failed with `ModuleNotFoundError`. I changed the confidence-interval calculation to use the supported t critical values directly and installed the plotting dependencies before rerunning the analysis.
+
+The timing explanation was also initially too simple. I expected early exit to be faster because it checked fewer bits. The first diagnostic used a separate array, so it did not fully represent the complete Bloom-plus-exact-set pipeline. I then ran a follow-up using the same Bloom object and measured both query versions through the exact set. This showed that full scanning could be faster for all-absent queries but slower for mixed queries.
+
+**What I understand and what I still take on trust.** I understand the Bloom-filter invariant, the packed-word representation, bit indexing, the false-positive calculation, the exact-query pipeline and the main experimental results. I have not independently checked every detail of the AI-generated code used to generate the test data or collect the timing and storage measurements, so I take those parts on trust because I considered them supporting steps rather than the main algorithmic contribution, and they appeared relatively straightforward.
 
 ## References
 
