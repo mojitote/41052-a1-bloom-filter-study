@@ -30,7 +30,7 @@ for n in (20000,200000):
    summary.append(record)
 (a.out/'pipeline_summary.json').write_text(json.dumps(summary,indent=2)+'\n')
 with (a.out/'pipeline_summary.csv').open('w') as f:
- writer=csv.writer(f);writer.writerow(['n','k','absent_fraction','early_speedup','early_ci95','full_speedup','full_ci95','full_over_early','ratio_ci95'])
+ writer=csv.writer(f,lineterminator="\n");writer.writerow(['n','k','absent_fraction','early_speedup','early_ci95','full_speedup','full_ci95','full_over_early','ratio_ci95'])
  for r in summary:writer.writerow([r['n'],r['k'],r['negative_fraction']]+[r[name][v] for name in ('early_speedup','full_speedup','full_over_early') for v in ('mean','ci95_half')])
 fig,axes=plt.subplots(1,2,figsize=(10,3.4))
 for ax,n in zip(axes,(20000,200000)):
