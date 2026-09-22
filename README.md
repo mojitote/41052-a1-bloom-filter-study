@@ -4,7 +4,7 @@
 
 This project implements a packed, seeded Bloom filter for 64-bit integer keys and compares accuracy, capacity, requested storage, and lookup time against an exact hash set. The report follows the supplied Word template.
 
-**Final report:** [`Bloom_Filter_Report.pdf`](Bloom_Filter_Report.pdf)
+**Final report:** [`Bloom_Filter_Report.pdf`](Bloom_Filter_Report.pdf)  ·  [`report.md`](report.md)
 
 ## Main findings
 
