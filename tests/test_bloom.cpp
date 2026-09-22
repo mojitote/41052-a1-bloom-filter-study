@@ -37,10 +37,11 @@ int main() {
 
         wide_mask.insert(20); // includes position 46, which needs a 64-bit mask
         if (wide_mask.set_bits() != 3) {
-            std::cerr << "UINT64_C mask failed: key=20, positions=11 31 46, "
-                      << "actual set bits=" << wide_mask.set_bits()
-                      << ", expected set bits=3; position 46 was not set correctly\n";
-            throw std::runtime_error("high-bit mask mismatch");
+            std::cerr << "FAIL: key 20 should set positions 11, 31 and 46, "
+                      << "but the filter has " << wide_mask.set_bits()
+                      << " set bits instead of 3.\n"
+                      << "The high-bit mask for position 46 is incorrect.\n";
+            return 1;
         }
         require(wide_mask.contains(20),
                 "UINT64_C mask failed: inserted key was rejected");
