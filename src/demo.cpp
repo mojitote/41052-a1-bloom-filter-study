@@ -12,7 +12,11 @@ void print_words(const bloom::BloomFilter& filter) {
 }
 
 int main() {
-    bloom::BloomFilter f(64, 3, 7);
+    const std::uint64_t seed = 7;
+    bloom::BloomFilter f(64, 3, seed);
+    std::cout << "constructor -> bits=" << f.bits()
+              << ", hashes=" << f.hashes()
+              << ", seed=" << seed << '\n';
     for (auto x : {10, 20, 30}) {
         std::cout << "insert " << x << "; positions:";
         for (std::size_t i = 0; i < f.hashes(); ++i) std::cout << ' ' << f.position(x, i);
@@ -21,11 +25,19 @@ int main() {
     }
     std::uint64_t fp = 31;
     while (!f.contains(fp)) ++fp;
-    std::cout << "contains(10)=" << f.contains(10) << " (inserted); positions:";
-    for (std::size_t i = 0; i < f.hashes(); ++i) std::cout << ' ' << f.position(10, i);
+    std::cout << "contains(10)=" << f.contains(10) << " (inserted)\n"
+              << "  -> checks positions: ";
+    for (std::size_t i = 0; i < f.hashes(); ++i) {
+        if (i) std::cout << " -> ";
+        std::cout << f.position(10, i);
+    }
     std::cout << '\n';
     std::cout << "contains(" << fp << ")=" << f.contains(fp)
-              << " (NOT inserted: false positive); positions:";
-    for (std::size_t i = 0; i < f.hashes(); ++i) std::cout << ' ' << f.position(fp, i);
+              << " (NOT inserted: false positive)\n"
+              << "  -> checks positions: ";
+    for (std::size_t i = 0; i < f.hashes(); ++i) {
+        if (i) std::cout << " -> ";
+        std::cout << f.position(fp, i);
+    }
     std::cout << '\n';
 }
