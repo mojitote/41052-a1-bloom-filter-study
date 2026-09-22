@@ -142,7 +142,9 @@ This suggested that fewer bit checks did not guarantee lower runtime. Branches a
 
 ![Figure 5. The September 22 comparison of both exact pipelines. Values above 1 mean faster lookup than the set alone. Error bars show 95% intervals across four seed ratios.](../figures/pipeline_exit.png)
 
-The final timing check uses contains and contains_full_scan on the same Bloom object and exact set. Both answers are verified per key. It tests two set sizes, k = 1 or 7, four query mixes and four seeds, with seven repetitions of 200,000 queries. The timing and analysis procedure follows Section 2.2, giving 1,344 rows.
+This section compares two complete exact-query pipelines. In both pipelines, the Bloom filter first rejects keys that are definitely absent, and the exact set checks every possible match so the final answer remains exact. The difference is only in the Bloom query: contains stops at the first zero bit, while contains_full_scan checks all k positions before returning.
+
+The final timing check uses the same Bloom object and exact set for both versions. It tests two set sizes, k = 1 or 7, four query mixes and four seeds, with seven repetitions of 200,000 queries. The timing and analysis procedure follows Section 2.2, giving 1,344 rows.
 
 With all queries absent, full scanning is 1.812 ± 0.034 times as fast as early exit. It also beats the set alone at both sizes. At 50% absent, however, its speed relative to early exit is 0.859 ± 0.006, so it is slower. At 90% absent, its interval relative to the set includes 1.
 
