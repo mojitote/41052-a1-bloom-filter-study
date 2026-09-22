@@ -1,0 +1,11 @@
+{
+  "date": "2026-09-22",
+  "scope": "Report language revision only",
+  "rendered_pages": 18,
+  "all_pages_visually_reviewed": true,
+  "headings_references_and_numeric_tables_unchanged": true,
+  "algorithm_and_raw_measurements_unchanged": true,
+  "word_files_identical": true,
+  "render_directory": "docs/qa/plain-final",
+  "algorithm_tests_rerun": false
+}

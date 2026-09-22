@@ -44,3 +44,5 @@ and ran a separate exact-pipeline experiment plus analysis. Codex generated the
 new figure, updated the template-based report and performed rendering QA. These
 are agent-performed steps, not a claim that the student independently implemented
 or measured them. The experiment tests pipeline impact, not hardware causation.
+
+Codex also rewrote the report in clear student English at the user's request, preserving numerical results and references, and visually checked all 18 rendered pages.
