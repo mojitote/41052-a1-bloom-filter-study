@@ -6,6 +6,11 @@
   "headings_references_and_numeric_tables_unchanged": true,
   "algorithm_and_raw_measurements_unchanged": true,
   "word_files_identical": true,
-  "render_directory": "docs/qa/plain-final",
-  "algorithm_tests_rerun": false
+  "render_directory": "docs/qa/built-compact",
+  "algorithm_tests_rerun": false,
+  "what_i_built_revision": "Added representation rationale, textbook comparison and full-scan extension; removed opening experiment summary.",
+  "changed_rendered_pages": [
+    3
+  ],
+  "other_pages_pixel_identical_to_previous_review": true
 }

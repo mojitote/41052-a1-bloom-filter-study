@@ -2,11 +2,13 @@
 
 ## 1 What I built
 
-This project uses C++17 to implement a Bloom filter that supports insertion and lookup. The experiments compare its error rate, memory use and query time. The main finding is that fewer false positives do not always mean faster queries. With many queries for missing keys, using one hash was faster than using seven, even though seven gave a lower error rate.
+This project implements an insertion-only Bloom filter in C++17, using explicit unsigned arithmetic and bit operations. A query returns either definitely absent or possibly present.
 
-The filter takes unsigned 64-bit keys as input and stores their bit markers in an array of 64-bit words. Its settings are the number of bits m, the number of hashes k and a seed. insert sets the markers; contains returns false for definitely absent and true for possibly present. The implementation does not support deletion, resizing, saving to disk or concurrent updates.
+Keys are unsigned 64-bit integers, keeping string encoding and variable-length hashing outside the study. A vector packs the bit markers into 64-bit words for compact storage. The bit count m, hash count k and seed are fixed at construction. Deletion and resizing are not supported.
 
-To calculate each position, the code mixes the key with a salt that depends on the seed and hash number, then takes the result modulo m. It uses the SplitMix64 finalizer and constants from Vigna [3]. This is a deterministic, non-cryptographic hash. Using different salts does not prove that the hash positions are independent.
+The textbook model assumes independent hashes. This implementation uses the SplitMix64 finalizer and constants from Vigna [3]. Each position combines the key with a salt based on the seed and hash number, then reduces the mixed result modulo m. The mapping is repeatable and non-cryptographic; different salts do not establish independence.
+
+The standard contains method stops at the first zero bit. The added contains_full_scan checks all k positions. Both read the same stored bits and return the same answer, allowing their query times to be compared.
 
 | Location | Purpose |
 | --- | --- |
