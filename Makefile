@@ -16,12 +16,12 @@ $(BIN)/early_exit: src/early_exit.cpp include/bloom.hpp | $(BIN)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 test: $(BIN)/test_bloom $(BIN)/bloom_demo
 	./$(BIN)/test_bloom
-	./$(BIN)/bloom_demo --what-breaks
+	./$(BIN)/bloom_demo
 sanitize: | $(BIN)
 	$(CXX) $(CPPFLAGS) -std=c++17 -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer tests/test_bloom.cpp -o $(BIN)/test_sanitize
 	./$(BIN)/test_sanitize
 demo: $(BIN)/bloom_demo
-	./$(BIN)/bloom_demo --what-breaks
+	./$(BIN)/bloom_demo
 clean:
 	rm -rf $(BIN)
 

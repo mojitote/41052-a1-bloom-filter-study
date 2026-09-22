@@ -23,7 +23,7 @@ Requirements: C++17 compiler (Clang or GCC) and Make. No third-party C++ library
 make all
 make test
 make sanitize
-./build/bloom_demo --what-breaks
+./build/bloom_demo
 ```
 
 `make test` performs 464,427 checks and the mutation demonstration. Sanitizers cover the core test suite; sanitizer binaries are never used for timing. `make sanitize` requires compiler support for AddressSanitizer and UndefinedBehaviorSanitizer.
@@ -69,7 +69,7 @@ The analysis validates row completeness, uniqueness, count semantics and exact-p
 | `include/bloom.hpp` | Core insertion-only filter and theoretical approximation |
 | `src/study.cpp` | Main accuracy, capacity, timing and allocator instrumentation |
 | `src/early_exit.cpp` | Follow-up diagnostic ablation with identical logical bit layouts |
-| `src/demo.cpp` | Worked example and deliberate what-breaks mutation |
+| `src/demo.cpp` | Worked example with bit-word traces and a deterministic false positive |
 | `tests/test_bloom.cpp` | Known-answer, boundary, randomized and per-key oracle checks |
 | `results/full-20260910/` | Raw accuracy, timing and memory CSVs used in the report |
 | `results/early-exit-20260910.csv` | Raw ablation measurements |
