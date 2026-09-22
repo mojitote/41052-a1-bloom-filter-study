@@ -32,6 +32,12 @@ int main() {
             require(trace.position(10, i) == expected10[i], "known index for 10");
             require(trace.position(20, i) == expected20[i], "known index for 20");
         }
+        bloom::BloomFilter wide_mask(64, 3, 7);
+        wide_mask.insert(20); // includes position 46, which needs a 64-bit mask
+        require(wide_mask.set_bits() == 3,
+                "UINT64_C mask failed: a high bit was not set correctly");
+        require(wide_mask.contains(20),
+                "UINT64_C mask failed: inserted key was rejected");
         for (std::size_t m : {1u, 7u, 63u, 64u, 65u, 127u, 1024u}) {
             for (std::size_t k : {1u, 3u, 64u}) {
                 bloom::BloomFilter f(m, k, 42);
