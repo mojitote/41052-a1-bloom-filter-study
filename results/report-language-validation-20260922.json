@@ -3,14 +3,22 @@
   "scope": "Report language revision only",
   "rendered_pages": 18,
   "all_pages_visually_reviewed": true,
-  "headings_references_and_numeric_tables_unchanged": true,
+  "headings_references_and_numeric_tables_unchanged": false,
   "algorithm_and_raw_measurements_unchanged": true,
   "word_files_identical": true,
-  "render_directory": "docs/qa/built-compact",
+  "render_directory": "docs/qa/equations-final",
   "algorithm_tests_rerun": false,
   "what_i_built_revision": "Added representation rationale, textbook comparison and full-scan extension; removed opening experiment summary.",
   "changed_rendered_pages": [
-    3
+    2,
+    3,
+    4,
+    5,
+    7,
+    13
   ],
-  "other_pages_pixel_identical_to_previous_review": true
+  "other_pages_pixel_identical_to_previous_review": true,
+  "native_word_equations": 6,
+  "numeric_table_values_and_references_unchanged": true,
+  "revision": "Defined symbols before formulas; renamed section 1.1; added editable Office Math and Markdown LaTeX."
 }

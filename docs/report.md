@@ -6,7 +6,7 @@ This project implements an insertion-only Bloom filter in C++17, using explicit 
 
 Keys are unsigned 64-bit integers, keeping string encoding and variable-length hashing outside the study. A vector packs the bit markers into 64-bit words for compact storage. The bit count m, hash count k and seed are fixed at construction. Deletion and resizing are not supported.
 
-The textbook model assumes independent hashes. This implementation uses the SplitMix64 finalizer and constants from Vigna [3]. Each position combines the key with a salt based on the seed and hash number, then reduces the mixed result modulo m. The mapping is repeatable and non-cryptographic; different salts do not establish independence.
+The textbook model assumes independent hashes. This implementation uses the SplitMix64 finalizer and constants from Vigna [3]. Each position combines the key with a salt (an extra mixing value) based on the seed and hash number, then reduces the mixed result modulo m. The mapping is repeatable and non-cryptographic; different salts do not establish independence.
 
 The standard contains method stops at the first zero bit. The added contains_full_scan checks all k positions. Both read the same stored bits and return the same answer, allowing their query times to be compared.
 
@@ -18,11 +18,11 @@ The standard contains method stops at the first zero bit. The added contains_ful
 | src/pipeline_exit.cpp | Paired exact-pipeline follow-up |
 | scripts/analyze*.py | Validation, summaries and plots |
 
-## 1.1 Correctness and the difficult step
+## 1.1 Implementation details and correctness
 
 The invariant is that every bit needed by an inserted key stays set. All bits start at zero. Insertion uses bitwise OR to set the key’s k positions without clearing existing bits. Lookup checks the same positions with the same settings. Therefore, an inserted key always returns true. This guarantee holds even if the hashes are not independent.
 
-For a position p, p / 64 selects the word and p % 64 selects the bit inside it. UINT64_C(1) provides an unsigned constant wide enough to shift to any bit in a word. The offset stays between 0 and 63. The allocation rounds up to whole words and avoids adding 63 to bits, which could overflow for a very large input.
+For a bit position p in the array, p / 64 selects the word and p % 64 selects the bit inside it. UINT64_C(1) provides an unsigned constant wide enough to shift to any bit in a word. The offset stays between 0 and 63. The allocation rounds up to whole words and avoids adding 63 to bits, which could overflow for a very large input.
 
 The demo uses m = 64, k = 3 and seed = 7, then inserts 10, 20 and 30. Key 10 uses positions 30, 14 and 16. Key 37 also returns true although it was never inserted: this is a false positive. A separate, deliberately broken example replaces |= with =. This clears earlier bits in the word and causes an inserted key to return false.
 
@@ -32,11 +32,29 @@ The tests pass 464,427 checks in both the optimised build and the AddressSanitiz
 
 ### 2.1 Questions and initial hypotheses
 
-The study began with three hypotheses. H1: with a fixed number of bits per key, increasing k should first lower the false-positive rate and then raise it, following the theoretical curve. H2: inserting more keys than the filter was designed for should increase false positives without causing false negatives. H3: filtering before an exact lookup should help when it rejects enough missing keys to save more time than the filter takes.
+Here, n counts distinct inserted keys, m is the array size in bits, and k is the number of hash positions per key. The hypotheses are:
 
-For n distinct keys in m bits, independent uniform hashing gives a probability of (1 − 1/m)^(kn) that a bit stays zero. The usual approximation for the false-positive rate is p ≈ (1 − exp(−kn/m))^k [1, 2]. It treats the queried bit values as approximately independent, so it predicts the rate rather than giving an exact value for this implementation.
+H1: At a fixed bit budget per key, increasing k should first lower and then raise the false-positive rate. H2: Exceeding design capacity should increase false positives without rejecting inserted keys. H3: Filtering should reduce total query time when skipped exact-set lookups save more time than filtering costs.
 
-Let b = m/n be the average bit budget per key. The hash count that minimises the approximate false-positive rate is k* ≈ b ln 2. With b = 10, this gives k* ≈ 6.93, so seven hashes are a reasonable choice for accuracy. The formula does not include the time spent calculating and checking those hashes.
+With independent, uniform hashes, a particular bit stays zero with probability:
+
+$$
+{P}_{\mathrm{zero}} = {\left(1 - \frac{1}{m}\right)}^{kn}
+$$
+
+The usual approximation for the false-positive rate p is [1, 2]:
+
+$$
+p \approx  {\left(1 - {e}^{-\frac{kn}{m}}\right)}^{k}
+$$
+
+This assumes approximately independent queried bits. Let b be bits per inserted key and k* the hash count that minimises the approximation:
+
+$$
+b = \frac{m}{n} ,     {k}^{*} \approx  b ln 2
+$$
+
+At 10 bits per key, k* is about 6.93. Seven hashes therefore targets low error; the formula does not optimise query time.
 
 | Experiment | Controlled design |
 | --- | --- |
@@ -59,7 +77,7 @@ For each seed, the analysis takes the median of seven timings, then reports the 
 
 ![Figure 1. Left: mean false-positive rates across eight seeds, with 95% intervals and theoretical curves. Right: the effect of inserting more keys into a fixed-size filter. Some error bars are too small to see.](../figures/accuracy.png)
 
-| Bits per key | Measured best k | FPR at that k |
+| Bits per key | Measured best k | False-positive rate |
 | --- | --- | --- |
 | 4 | 3 | 14.712% |
 | 8 | 6 | 2.144% |
@@ -143,13 +161,29 @@ Using one Bloom object removes the different array addresses from the earlier co
 
 ## 2.8 Interpretation and limits
 
-Let q be the fraction of queries for absent keys and p the false-positive rate. The fraction reaching the exact set is approximately r = (1 − q) + qp: all present keys and the false positives need an exact check. If each set lookup costs an extra L, then Tset(L) = Tset(0) + L and Tfiltered(L) = Tfiltered(0) + rL. For r < 1, the extra cost at which the methods take equal time is L* = (Tfiltered(0) − Tset(0))/(1 − r).
+Let q be the fraction of queries for absent keys and p the false-positive rate. The fraction r that reaches the exact set is approximately:
 
-For n = 20,000, k = 7 and all queries absent, the original paired timings give L* values between 11.18 and 12.17 ns across seeds. This estimates how much extra lookup cost would make filtering worthwhile. It assumes the same extra cost for every set lookup; real databases or networks may behave differently because of caching, batching, concurrency and different costs for hits and misses.
+$$
+r \approx  (1 - q) + qp
+$$
 
-Both runs used an Apple M2 with 8 GB memory, macOS 14.4.1 and Apple Clang 15, compiling C++17 with -O3. CPU affinity, power state and background activity were not controlled. The tests use warmed-up queries, two set sizes and uniform integer keys. They do not cover cold storage, skewed queries or adversarial inputs. Data generation and filtering also share the same mixer family.
+All present keys and the false positives require a set lookup. Let L be an extra cost per set lookup, and let T denote average time per input query. The subscripts identify set-only lookup and Bloom followed by the set. Using the measured times at L = 0:
 
-Construction was measured separately and is excluded from query speedups. Each set-build time is one observation copied across the relevant k rows in the memory CSV, not a new measurement in each row. The performance comparison therefore concerns repeated lookups after the structures have been built.
+$$
+{T}_{\mathrm{set}}(L) = {T}_{\mathrm{set}}(0) + L ,     {T}_{\mathrm{filtered}}(L) = {T}_{\mathrm{filtered}}(0) + rL
+$$
+
+For r < 1, the extra cost L* at which both methods take equal time is:
+
+$$
+{L}^{*} = \frac{{T}_{\mathrm{filtered}}(0) - {T}_{\mathrm{set}}(0)}{1 - r}
+$$
+
+For 20,000 keys, seven hashes and all queries absent, the original paired timings give break-even costs of 11.18–12.17 ns across seeds. The model assumes equal extra cost per set lookup. Real databases may differ because of caching, batching, concurrency and different costs for hits and misses.
+
+Both runs used an Apple M2 with 8 GB memory, macOS 14.4.1 and Apple Clang 15 with -O3. Processor assignment, power state and background activity were uncontrolled. Tests cover warmed-up queries, two set sizes and uniform integer keys, excluding cold storage, skewed queries and adversarial inputs. Data generation and filtering share the same mixer family.
+
+Construction is excluded from query speedups. Each set-build time is one observation repeated across the relevant k rows in the memory CSV. The comparison concerns repeated lookups after construction.
 
 ## 2.9 Choosing a configuration
 

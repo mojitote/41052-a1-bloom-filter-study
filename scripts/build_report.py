@@ -25,25 +25,32 @@ def P(s):return ('p',s)
 def H(s):return ('h',s)
 def T(headers,rows):return ('table',headers,rows)
 def F(name,caption):return ('figure',name,caption)
+def Q(name):return ('equation',name)
 
 page('1 What I built',[
  P('This project implements an insertion-only Bloom filter in C++17, using explicit unsigned arithmetic and bit operations. A query returns either definitely absent or possibly present.'),
  P('Keys are unsigned 64-bit integers, keeping string encoding and variable-length hashing outside the study. A vector packs the bit markers into 64-bit words for compact storage. The bit count m, hash count k and seed are fixed at construction. Deletion and resizing are not supported.'),
- P('The textbook model assumes independent hashes. This implementation uses the SplitMix64 finalizer and constants from Vigna [3]. Each position combines the key with a salt based on the seed and hash number, then reduces the mixed result modulo m. The mapping is repeatable and non-cryptographic; different salts do not establish independence.'),
+ P('The textbook model assumes independent hashes. This implementation uses the SplitMix64 finalizer and constants from Vigna [3]. Each position combines the key with a salt (an extra mixing value) based on the seed and hash number, then reduces the mixed result modulo m. The mapping is repeatable and non-cryptographic; different salts do not establish independence.'),
  P('The standard contains method stops at the first zero bit. The added contains_full_scan checks all k positions. Both read the same stored bits and return the same answer, allowing their query times to be compared.'),
  T(['Location','Purpose'],[['include/bloom.hpp','Packed storage, hashing and membership'],['src/study.cpp','Data generation, baselines and measurements'],['tests/test_bloom.cpp','Deterministic and randomized checks'],['src/pipeline_exit.cpp','Paired exact-pipeline follow-up'],['scripts/analyze*.py','Validation, summaries and plots']]),
 ])
-page('1.1 Correctness and the difficult step',[
+page('1.1 Implementation details and correctness',[
  P('The invariant is that every bit needed by an inserted key stays set. All bits start at zero. Insertion uses bitwise OR to set the key’s k positions without clearing existing bits. Lookup checks the same positions with the same settings. Therefore, an inserted key always returns true. This guarantee holds even if the hashes are not independent.'),
- P('For a position p, p / 64 selects the word and p % 64 selects the bit inside it. UINT64_C(1) provides an unsigned constant wide enough to shift to any bit in a word. The offset stays between 0 and 63. The allocation rounds up to whole words and avoids adding 63 to bits, which could overflow for a very large input.'),
+ P('For a bit position p in the array, p / 64 selects the word and p % 64 selects the bit inside it. UINT64_C(1) provides an unsigned constant wide enough to shift to any bit in a word. The offset stays between 0 and 63. The allocation rounds up to whole words and avoids adding 63 to bits, which could overflow for a very large input.'),
  P('The demo uses m = 64, k = 3 and seed = 7, then inserts 10, 20 and 30. Key 10 uses positions 30, 14 and 16. Key 37 also returns true although it was never inserted: this is a false positive. A separate, deliberately broken example replaces |= with =. This clears earlier bits in the word and causes an inserted key to return false.'),
  P('The tests pass 464,427 checks in both the optimised build and the AddressSanitizer/UndefinedBehaviorSanitizer build. They cover empty filters, invalid settings, repeated insertions, keys 0 and UINT64_MAX, word boundaries and full filters. They also check that both query versions agree and that the filter followed by an exact set gives the correct answer for each tested key. The accuracy experiment checks another 11,560,000 inserted-key lookups with no false negatives.'),
 ])
 page('2 Empirical study',[
  H('2.1 Questions and initial hypotheses'),
- P('The study began with three hypotheses. H1: with a fixed number of bits per key, increasing k should first lower the false-positive rate and then raise it, following the theoretical curve. H2: inserting more keys than the filter was designed for should increase false positives without causing false negatives. H3: filtering before an exact lookup should help when it rejects enough missing keys to save more time than the filter takes.'),
- P('For n distinct keys in m bits, independent uniform hashing gives a probability of (1 − 1/m)^(kn) that a bit stays zero. The usual approximation for the false-positive rate is p ≈ (1 − exp(−kn/m))^k [1, 2]. It treats the queried bit values as approximately independent, so it predicts the rate rather than giving an exact value for this implementation.'),
- P('Let b = m/n be the average bit budget per key. The hash count that minimises the approximate false-positive rate is k* ≈ b ln 2. With b = 10, this gives k* ≈ 6.93, so seven hashes are a reasonable choice for accuracy. The formula does not include the time spent calculating and checking those hashes.'),
+ P('Here, n counts distinct inserted keys, m is the array size in bits, and k is the number of hash positions per key. The hypotheses are:'),
+ P('H1: At a fixed bit budget per key, increasing k should first lower and then raise the false-positive rate. H2: Exceeding design capacity should increase false positives without rejecting inserted keys. H3: Filtering should reduce total query time when skipped exact-set lookups save more time than filtering costs.'),
+ P('With independent, uniform hashes, a particular bit stays zero with probability:'),
+ Q('zero'),
+ P('The usual approximation for the false-positive rate p is [1, 2]:'),
+ Q('fpr'),
+ P('This assumes approximately independent queried bits. Let b be bits per inserted key and k* the hash count that minimises the approximation:'),
+ Q('optimal'),
+ P('At 10 bits per key, k* is about 6.93. Seven hashes therefore targets low error; the formula does not optimise query time.'),
  T(['Experiment','Controlled design'],[['Hash sweep','n = 20,000; b ∈ {4, 8, 10, 16}; k = 1…16'],['Capacity','m = 200,000; k = 7; n = 5,000…60,000'],['Exact lookup','n ∈ {20,000, 200,000}; b = 10; k ∈ {1, 3, 7, 11}'],['Query mix','Absent fractions 0%, 50%, 90%, 100%']]),
 ])
 page('2.2 Reproducible measurement',[
@@ -55,7 +62,7 @@ page('2.2 Reproducible measurement',[
 a7=pick('accuracy',bits_per_key=10,k=7)
 page('2.3 Accuracy and hash count',[
  F('accuracy.png','Figure 1. Left: mean false-positive rates across eight seeds, with 95% intervals and theoretical curves. Right: the effect of inserting more keys into a fixed-size filter. Some error bars are too small to see.'),
- T(['Bits per key','Measured best k','FPR at that k'],[[str(b),str(int(min([x for x in S['accuracy'] if x['bits_per_key']==b],key=lambda x:x['mean'])['k'])),pct(min([x for x in S['accuracy'] if x['bits_per_key']==b],key=lambda x:x['mean'])['mean'])] for b in [4,8,10,16]]),
+ T(['Bits per key','Measured best k','False-positive rate'],[[str(b),str(int(min([x for x in S['accuracy'] if x['bits_per_key']==b],key=lambda x:x['mean'])['k'])),pct(min([x for x in S['accuracy'] if x['bits_per_key']==b],key=lambda x:x['mean'])['mean'])] for b in [4,8,10,16]]),
  P('At 10 bits per key, k = 7 gives a false-positive rate of {value} percentage points, close to the predicted 0.819%. Raising k to 16 increases the measured rate to 2.714%. More hashes make a query check more positions, but they also set more bits during insertion. When the array becomes too full, the extra checks no longer reduce false positives.'.format(value=ci(a7,100))),
  P('At 16 bits per key, k = 12 has the lowest measured mean, while the rounded theoretical choice is 11. The confidence intervals for nearby choices overlap, so the result does not clearly show that 12 is better. Random variation can change which setting has the smallest measured value.'),
 ])
@@ -91,10 +98,15 @@ page('2.7.1 Results and scope',[
  P('Using one Bloom object removes the different array addresses from the earlier comparison. With k = 1, the timing differences between versions are much smaller than with k = 7 when most queries are absent. However, the experiment does not separate the effects of branches, vectorisation or instruction scheduling. It uses four seeds, a fixed order of configurations and an active desktop machine.'),
 ])
 page('2.8 Interpretation and limits',[
- P('Let q be the fraction of queries for absent keys and p the false-positive rate. The fraction reaching the exact set is approximately r = (1 − q) + qp: all present keys and the false positives need an exact check. If each set lookup costs an extra L, then Tset(L) = Tset(0) + L and Tfiltered(L) = Tfiltered(0) + rL. For r < 1, the extra cost at which the methods take equal time is L* = (Tfiltered(0) − Tset(0))/(1 − r).'),
- P('For n = 20,000, k = 7 and all queries absent, the original paired timings give L* values between 11.18 and 12.17 ns across seeds. This estimates how much extra lookup cost would make filtering worthwhile. It assumes the same extra cost for every set lookup; real databases or networks may behave differently because of caching, batching, concurrency and different costs for hits and misses.'),
- P('Both runs used an Apple M2 with 8 GB memory, macOS 14.4.1 and Apple Clang 15, compiling C++17 with -O3. CPU affinity, power state and background activity were not controlled. The tests use warmed-up queries, two set sizes and uniform integer keys. They do not cover cold storage, skewed queries or adversarial inputs. Data generation and filtering also share the same mixer family.'),
- P('Construction was measured separately and is excluded from query speedups. Each set-build time is one observation copied across the relevant k rows in the memory CSV, not a new measurement in each row. The performance comparison therefore concerns repeated lookups after the structures have been built.'),
+ P('Let q be the fraction of queries for absent keys and p the false-positive rate. The fraction r that reaches the exact set is approximately:'),
+ Q('reaching'),
+ P('All present keys and the false positives require a set lookup. Let L be an extra cost per set lookup, and let T denote average time per input query. The subscripts identify set-only lookup and Bloom followed by the set. Using the measured times at L = 0:'),
+ Q('cost'),
+ P('For r < 1, the extra cost L* at which both methods take equal time is:'),
+ Q('break_even'),
+ P('For 20,000 keys, seven hashes and all queries absent, the original paired timings give break-even costs of 11.18–12.17 ns across seeds. The model assumes equal extra cost per set lookup. Real databases may differ because of caching, batching, concurrency and different costs for hits and misses.'),
+ P('Both runs used an Apple M2 with 8 GB memory, macOS 14.4.1 and Apple Clang 15 with -O3. Processor assignment, power state and background activity were uncontrolled. Tests cover warmed-up queries, two set sizes and uniform integer keys, excluding cold storage, skewed queries and adversarial inputs. Data generation and filtering share the same mixer family.'),
+ P('Construction is excluded from query speedups. Each set-build time is one observation repeated across the relevant k rows in the memory CSV. The comparison concerns repeated lookups after construction.'),
 ])
 page('2.9 Choosing a configuration',[
  P('Choose the setting based on the answer guarantee and the work it needs to save. If false positives are acceptable, select m and k for the error target. If answers must be exact, keep the set and measure the combined query time. In that case, the filter uses extra memory to avoid some set lookups.'),
@@ -180,6 +192,58 @@ def figure(path,rid,idx):
     xml=f'''<w:p xmlns:w="{W}" xmlns:r="{R}" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:pPr><w:keepNext/><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="{cx}" cy="{cy}"/><wp:docPr id="{100+idx}" name="Study figure {idx}"/><wp:cNvGraphicFramePr/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="0" name="{path.name}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="{rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="{cx}" cy="{cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>'''
     return E.fromstring(xml.encode())
 
+M='http://schemas.openxmlformats.org/officeDocument/2006/math'
+def me(tag): return E.Element('{'+M+'}'+tag)
+def frac(a,b): return ('frac',a,b)
+def power(a,b): return ('sup',a,b)
+def sub(a,b): return ('sub',a,b)
+def seq(*xs): return ('seq',*xs)
+def brackets(x): return ('brackets',x)
+def append_math(parent,x):
+    if isinstance(x,tuple) and x[0]=='seq':
+        for v in x[1:]:append_math(parent,v)
+    else:parent.append(math_node(x))
+def math_node(x):
+    if isinstance(x,str):
+        r=me('r');t=me('t');t.text=x;r.append(t);return r
+    kind,*xs=x
+    if kind=='seq':
+        e=me('e')
+        for v in xs:e.append(math_node(v))
+        return e
+    if kind=='brackets':
+        d=me('d');e=me('e');append_math(e,xs[0]);d.append(e);return d
+    tag,children={'frac':('f',['num','den']),'sup':('sSup',['e','sup']),'sub':('sSub',['e','sub'])}[kind]
+    node=me(tag)
+    for name,v in zip(children,xs):
+        child=me(name);append_math(child,v);node.append(child)
+    return node
+Ts=sub('T','set');Tf=sub('T','filtered')
+EQUATIONS={
+ 'zero':seq(sub('P','zero'),' = ',power(brackets(seq('1 − ',frac('1','m'))),'kn')),
+ 'fpr':seq('p ≈ ',power(brackets(seq('1 − ',power('e',seq('−',frac('kn','m'))))),'k')),
+ 'optimal':seq('b = ',frac('m','n'),' ,     ',power('k','*'),' ≈ b ln 2'),
+ 'reaching':seq('r ≈ (1 − q) + qp'),
+ 'cost':seq(Ts,'(L) = ',Ts,'(0) + L',' ,     ',Tf,'(L) = ',Tf,'(0) + rL'),
+ 'break_even':seq(power('L','*'),' = ',frac(seq(Tf,'(0) − ',Ts,'(0)'),'1 − r')),
+}
+def latex(x):
+    if isinstance(x,str):return x.replace('≈',r'\approx ').replace('−','-')
+    kind,*xs=x
+    if kind=='seq':return ''.join(latex(v) for v in xs)
+    if kind=='brackets':return r'\left('+latex(xs[0])+r'\right)'
+    a,b=map(latex,xs)
+    if kind=='frac':return r'\frac{'+a+'}{'+b+'}'
+    if kind=='sub':return '{'+a+'}_{'+(r'\mathrm{'+b+'}' if len(b)>1 else b)+'}'
+    return '{'+a+'}^{'+b+'}'
+def equation(name):
+    p=para('',compact=True);p.remove(p[-1]);p[0].append(el('jc',val='center'))
+    op=me('oMathPara');o=me('oMath');node=math_node(EQUATIONS[name])
+    if E.QName(node).localname=='e':
+        for c in list(node):o.append(c)
+    else:o.append(node)
+    op.append(o);p.append(op);return p
+
 def main():
     p=argparse.ArgumentParser();p.add_argument('--template',type=Path,required=True);p.add_argument('--out',type=Path,default=ROOT/'docs/Bloom_Filter_Report_Optimized.docx');args=p.parse_args()
     original=args.template.read_bytes();parts={}
@@ -210,6 +274,8 @@ def main():
                 pp=para(item[1])
                 if E.QName(body[-1]).localname=='tbl':pp[0].append(el('spacing',before=140))
                 body.append(pp);md.append(item[1]+'\n')
+            if item[0]=='equation':
+                body.append(equation(item[1]));md.append('$$\n'+latex(EQUATIONS[item[1]])+'\n$$\n')
             if item[0]=='h':body.append(para(item[1],'Heading2'));md.append('### '+item[1]+'\n')
             if item[0]=='table':
                 body.append(table(item[1],item[2]));md.extend(['| '+' | '.join(item[1])+' |','| '+' | '.join(['---']*len(item[1]))+' |']+['| '+' | '.join(map(str,r))+' |' for r in item[2]]+[''])
