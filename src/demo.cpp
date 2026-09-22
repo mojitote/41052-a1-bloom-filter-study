@@ -20,6 +20,13 @@ void print_words(const bloom::BloomFilter& filter, std::uint64_t key) {
     std::cout << '\n';
 }
 
+void print_initial_words(const bloom::BloomFilter& filter) {
+    std::cout << "\n[initial bit array]\n";
+    for (std::size_t i = 0; i < filter.storage_bytes() / sizeof(std::uint64_t); ++i)
+        std::cout << "  word[" << i << "] = "
+                  << std::bitset<64>(filter.debug_word(i)) << '\n';
+}
+
 void print_checked_word(const bloom::BloomFilter& filter, std::uint64_t key) {
     const std::string prefix = "  word[0] = ";
     const std::string bits = std::bitset<64>(filter.debug_word(0)).to_string();
@@ -44,6 +51,7 @@ int main() {
     std::cout << "constructor -> bits=" << f.bits()
               << ", hashes=" << f.hashes()
               << ", seed=" << seed << '\n';
+    print_initial_words(f);
     for (auto x : {10, 20, 30}) {
         std::cout << "\n[insert key " << x << "]\n"
                   << "positions:";
