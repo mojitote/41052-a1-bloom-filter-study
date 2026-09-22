@@ -144,12 +144,6 @@ This suggested that fewer bit checks did not guarantee lower runtime. Branches a
 
 The final timing check uses contains and contains_full_scan on the same Bloom object and exact set. Both answers are verified per key. It tests two set sizes, k = 1 or 7, four query mixes and four seeds, with seven repetitions of 200,000 queries. The timing and analysis procedure follows Section 2.2, giving 1,344 rows.
 
-| n = 200,000; k = 7 | Set / early time | Set / full time |
-| --- | --- | --- |
-| 50% absent | 0.732 ± 0.006 | 0.629 ± 0.004 |
-| 90% absent | 0.676 ± 0.016 | 1.011 ± 0.028 |
-| 100% absent | 0.707 ± 0.041 | 1.282 ± 0.098 |
-
 With all queries absent, full scanning is 1.812 ± 0.034 times as fast as early exit. It also beats the set alone at both sizes. At 50% absent, however, its speed relative to early exit is 0.859 ± 0.006, so it is slower. At 90% absent, its interval relative to the set includes 1.
 
 One hash still gives the fastest tested all-absent lookup: its speedup at 200,000 keys is 2.726 ± 0.055. Thus, improving the seven-hash code does not change the answer to the follow-up question: lowest error does not imply fastest lookup. The one-hash control shows much smaller differences between query versions, but these measurements do not identify a hardware cause. Configuration order was fixed on an active desktop.
