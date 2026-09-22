@@ -20,11 +20,15 @@ public:
     BloomFilter(std::size_t bits, std::size_t hashes, std::uint64_t seed = 1)
         : bits_(bits), hashes_(hashes), seed_(seed) {
         if (bits == 0 || hashes == 0 || hashes > 64)
+        //set 64 as the maximum to keep the query cost bounded, because more hash checks would add work without being practical for this project.
+        //it is not a theoretical limit of Bloom filters.
             throw std::invalid_argument("bits must be positive; hashes must be in [1,64]");
         // Division before addition avoids overflow for large bit counts.
         words_.assign(bits / 64 + (bits % 64 != 0), 0);
     }
 
+    //main invariant ：When a key is inserted, its bits are never cleared.
+    //The invariant is established during insertion. For every hash position of the key, the code sets the corresponding bit to one.
     void insert(std::uint64_t key) noexcept {
         for (std::size_t i = 0; i < hashes_; ++i) {
             const auto p = position(key, i);
@@ -46,10 +50,11 @@ public:
         // Existing 1 bits stay 1, and existing 0 bits stay 0,
         // except for the target bit, which becomes 1.
             words_[p / 64] |= UINT64_C(1) << (p % 64);
+        // Later insertions preserve the invariant because OR assignment can set bits, but it cannot clear bits.
         }
     }
 
-    //main invariant ： once a bit required by an inserted key is set, it is never cleared.
+    // The lookup function relies on this invariant. It calculates the same positions and checks the bits using a bitwise AND operation.
     bool contains(std::uint64_t key) const noexcept {
         for (std::size_t i = 0; i < hashes_; ++i) {
             const auto p = position(key, i);
@@ -77,11 +82,15 @@ public:
         for (auto word : words_) { while (word) { word &= word - 1; ++count; } }
         return count;
     }
-    // Exposed for the educational trace and independent indexing tests.
+    // Read-only access for the educational demo; normal users should use contains().
+    std::uint64_t debug_word(std::size_t index) const noexcept { return words_[index]; }
+
+    // 
     std::size_t position(std::uint64_t key, std::size_t i) const noexcept {
         const auto salt = mix64(seed_ + UINT64_C(0x9e3779b97f4a7c15) * (i + 1));
         return static_cast<std::size_t>(mix64(key ^ salt) % bits_);
     }
+
 private:
     std::size_t bits_, hashes_;
     std::uint64_t seed_;
