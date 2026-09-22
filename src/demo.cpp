@@ -14,10 +14,6 @@ void print_words(const bloom::BloomFilter& filter, std::uint64_t key) {
         marks[63 - p] = '^';
     }
     std::cout << std::string(prefix.size(), ' ') << marks << '\n';
-    std::cout << "  bits set by key " << key << ":";
-    for (std::size_t i = 0; i < filter.hashes(); ++i)
-        std::cout << ' ' << filter.position(key, i);
-    std::cout << '\n';
 }
 
 void print_initial_words(const bloom::BloomFilter& filter) {
