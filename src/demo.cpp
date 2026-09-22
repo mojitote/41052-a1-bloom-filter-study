@@ -21,9 +21,11 @@ int main() {
     }
     std::uint64_t fp = 31;
     while (!f.contains(fp)) ++fp;
-    std::cout << "contains(10)=" << f.contains(10) << " (inserted)\n";
-    std::cout << "false-positive candidate " << fp << "; positions:";
+    std::cout << "contains(10)=" << f.contains(10) << " (inserted); positions:";
+    for (std::size_t i = 0; i < f.hashes(); ++i) std::cout << ' ' << f.position(10, i);
+    std::cout << '\n';
+    std::cout << "contains(" << fp << ")=" << f.contains(fp)
+              << " (NOT inserted: false positive); positions:";
     for (std::size_t i = 0; i < f.hashes(); ++i) std::cout << ' ' << f.position(fp, i);
-    std::cout << "\ncontains(" << fp << ")=" << f.contains(fp)
-              << " (NOT inserted: false positive)\n";
+    std::cout << '\n';
 }
