@@ -71,7 +71,7 @@ page('2.4 Capacity and storage',[
  T(['Inserted / design capacity','Measured false-positive rate'],[[f'{load:g}×',pct(pick('capacity',load=load)['mean'])] for load in [.5,1.,1.5,2.,3.]]),
  P('With m = 200,000 and k = 7, the filter was designed for 20,000 keys. At twice that capacity, false positives rise from 0.821% to 13.841%; at three times capacity, they reach 40.182%. Inserted keys still pass, but the fuller array rejects fewer absent keys.'),
  P('Together, the hash-count and capacity curves broadly follow theory. At one quarter of capacity, however, only three false positives occurred in 1.6 million absent queries, too few to estimate this small probability precisely.'),
- H('Storage comparison'),
+ P('Storage comparison:'),
  T(['Structure at n = 200,000','Requested storage'],[['Bloom bit array','250,000 bytes'],['Exact set nodes and buckets','6,400,024 bytes'],['Bloom plus exact set','6,650,024 bytes']]),
  P('The exact set uses about 25.6 times the storage of the filter, but gives exact answers. Adding the filter to the set costs another 250,000 bytes, or 3.9%. Measurements count requested set-node and bucket bytes and the filter’s word array. They exclude object headers, allocator metadata and input vectors, rather than measuring total process memory.'),
 ])
